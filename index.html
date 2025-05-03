@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Koelkast App</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
 
@@ -21,8 +21,8 @@
       <p id="popupText" class="mb-4"></p>
       <input id="popupInput" class="w-full p-2 border rounded mb-4" type="password" />
       <div class="flex justify-end gap-2">
-        <button onclick="closePopup()" class="px-4 py-2 bg-gray-300 rounded">Annuleer</button>
-        <button onclick="handlePopupSubmit()" class="px-4 py-2 bg-blue-500 text-white rounded">Doorgaan</button>
+        <button id="cancelPopupBtn" class="px-4 py-2 bg-gray-300 rounded">Annuleer</button>
+        <button id="submitPopupBtn" class="px-4 py-2 bg-blue-500 text-white rounded">Doorgaan</button>
       </div>
     </div>
   </div>
@@ -33,166 +33,172 @@
     <p id="orderUserName" class="mb-4 text-gray-700"></p>
     <div id="productGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
     <div id="cart" class="mb-4"></div>
-    <button onclick="confirmOrder()" class="bg-blue-600 text-white px-4 py-2 rounded">Bevestig Bestelling</button>
-    <button onclick="goBack()" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded mt-2">Terug</button>
+    <button id="confirmOrderBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Bevestig Bestelling</button>
+    <button id="orderBackBtn" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded mt-2">Terug</button>
   </div>
 
   <!-- Beheerscherm -->
   <div id="adminScreen" class="hidden w-full">
     <h2 class="text-2xl font-semibold mb-4">Beheerscherm</h2>
     <div class="flex flex-col gap-2">
-      <button onclick="loadUsers()" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded">Gebruikers beheren</button>
+      <button id="loadUsersBtn" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded">Gebruikers beheren</button>
       <div id="userList" class="mb-4"></div>
       <div class="flex gap-2 mb-4">
         <input id="newUserName" placeholder="Naam" class="p-2 border rounded" />
         <input id="newUserCode" placeholder="Code" class="p-2 border rounded" />
-        <button onclick="addUser()" class="bg-green-600 text-white px-2 py-1 rounded">Toevoegen</button>
+        <button id="addUserBtn" class="bg-green-600 text-white px-2 py-1 rounded">Toevoegen</button>
       </div>
 
-      <button onclick="loadProductsAdmin()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded">Producten beheren</button>
+      <button id="loadProductsAdminBtn" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded">Producten beheren</button>
       <div id="adminProductList" class="mb-4"></div>
       <div class="flex gap-2 mb-4">
         <input id="newProductName" placeholder="Productnaam" class="p-2 border rounded" />
         <input id="newProductPrice" type="number" placeholder="Prijs" class="p-2 border rounded" />
         <input id="newProductStock" type="number" placeholder="Voorraad" class="p-2 border rounded" />
-        <button onclick="addProduct()" class="bg-green-600 text-white px-2 py-1 rounded">Toevoegen</button>
+        <button id="addProductBtn" class="bg-green-600 text-white px-2 py-1 rounded">Toevoegen</button>
       </div>
 
-      <button onclick="loadStock()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded">Voorraad beheren</button>
+      <button id="loadStockBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded">Voorraad beheren</button>
       <div id="stockList" class="mb-4"></div>
 
-      <button onclick="loadLogs()" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded">Bestellog bekijken</button>
+      <button id="loadLogsBtn" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded">Bestellog bekijken</button>
       <div id="logList" class="mb-4"></div>
 
-      <button onclick="goBack()" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded mt-2">Terug</button>
+      <button id="adminBackBtn" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded mt-2">Terug</button>
     </div>
   </div>
 
-  <!-- Scripts -->
   <script>
-    const { createClient } = supabase;
-    const supabaseClient = createClient(
-      "https://nsevcinmxmaplnpyctht.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU"
+    const supabase = supabase.createClient(
+      'https://nsevcinmxmaplnpyctht.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU'
     );
 
-    let popupType = "";
-    let currentUser = null;
+    const startScreen = document.getElementById('startScreen');
+    const popup = document.getElementById('popup');
+    const popupText = document.getElementById('popupText');
+    const popupInput = document.getElementById('popupInput');
+    const submitPopupBtn = document.getElementById('submitPopupBtn');
+    const cancelPopupBtn = document.getElementById('cancelPopupBtn');
+    const orderScreen = document.getElementById('orderScreen');
+    const adminScreen = document.getElementById('adminScreen');
+    const productGrid = document.getElementById('productGrid');
+    const cart = document.getElementById('cart');
+    const confirmOrderBtn = document.getElementById('confirmOrderBtn');
 
-    document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("orderBtn").addEventListener("click", () => showPopup("user"));
-      document.getElementById("adminBtn").addEventListener("click", () => showPopup("admin"));
+    let popupCallback = null;
+    let currentUser = null;
+    let currentCart = [];
+
+    function showPopup(message, callback) {
+      popupText.textContent = message;
+      popupInput.value = '';
+      popup.classList.remove('hidden');
+      popupCallback = callback;
+    }
+
+    submitPopupBtn.addEventListener('click', () => {
+      const input = popupInput.value;
+      popup.classList.add('hidden');
+      if (popupCallback) popupCallback(input);
     });
 
-    function showPopup(type) {
-      popupType = type;
-      document.getElementById("popupText").innerText = type === "admin" ? "Voer de beheercode in:" : "Voer je gebruikerscode in:";
-      document.getElementById("popupInput").value = "";
-      document.getElementById("popup").classList.remove("hidden");
-      setTimeout(() => document.getElementById("popupInput").focus(), 50);
-    }
+    cancelPopupBtn.addEventListener('click', () => {
+      popup.classList.add('hidden');
+    });
 
-    function closePopup() {
-      document.getElementById("popup").classList.add("hidden");
-      document.getElementById("popupInput").value = "";
-    }
-
-    async function handlePopupSubmit() {
-      const code = document.getElementById("popupInput").value.trim();
-      if (!code) {
-        alert("Vul een code in.");
-        return;
-      }
-      if (popupType === "admin") {
-        if (code === "Admin123") {
-          closePopup();
-          document.getElementById("startScreen").classList.add("hidden");
-          document.getElementById("adminScreen").classList.remove("hidden");
+    document.getElementById('orderBtn').addEventListener('click', () => {
+      showPopup('Voer je gebruikerscode in:', async (code) => {
+        const { data, error } = await supabase.from('users').select().eq('code', code).single();
+        if (data) {
+          currentUser = data;
+          startScreen.classList.add('hidden');
+          orderScreen.classList.remove('hidden');
+          document.getElementById('orderUserName').textContent = `Welkom ${data.name}`;
+          loadProducts();
         } else {
-          alert("Verkeerde code");
+          alert('Ongeldige gebruikerscode');
         }
-      } else if (popupType === "user") {
-        const { data: users, error } = await supabaseClient.from("users").select().eq("code", code);
-        if (error || !users || users.length === 0) {
-          alert("Gebruiker niet gevonden");
-          return;
-        }
-        currentUser = users[0];
-        document.getElementById("orderUserName").innerText = `Welkom, ${currentUser.name}`;
-        closePopup();
-        loadProducts();
-        document.getElementById("startScreen").classList.add("hidden");
-        document.getElementById("orderScreen").classList.remove("hidden");
-      }
-    }
+      });
+    });
 
-    function goBack() {
-      document.getElementById("orderScreen").classList.add("hidden");
-      document.getElementById("adminScreen").classList.add("hidden");
-      document.getElementById("startScreen").classList.remove("hidden");
-    }
+    document.getElementById('adminBtn').addEventListener('click', () => {
+      showPopup('Voer admincode in:', (code) => {
+        if (code === 'Admin123') {
+          startScreen.classList.add('hidden');
+          adminScreen.classList.remove('hidden');
+        } else {
+          alert('Ongeldige admincode');
+        }
+      });
+    });
+
+    document.getElementById('orderBackBtn').addEventListener('click', () => {
+      orderScreen.classList.add('hidden');
+      startScreen.classList.remove('hidden');
+      currentCart = [];
+      cart.innerHTML = '';
+    });
+
+    document.getElementById('adminBackBtn').addEventListener('click', () => {
+      adminScreen.classList.add('hidden');
+      startScreen.classList.remove('hidden');
+    });
 
     async function loadProducts() {
-      const { data: products } = await supabaseClient.from("products").select("id, name, price, stock");
-      const grid = document.getElementById("productGrid");
-      grid.innerHTML = "";
-      products.forEach(product => {
-        const btn = document.createElement("button");
-        btn.className = "border rounded p-2 bg-white hover:bg-gray-100 flex flex-col items-center";
-        btn.innerHTML = `<span>${product.name}</span><span class='text-sm text-gray-600'>€${product.price.toFixed(2)}</span>`;
-        btn.onclick = () => addToCart(product);
-        grid.appendChild(btn);
+      const { data, error } = await supabase.from('products').select();
+      productGrid.innerHTML = '';
+      data.forEach(product => {
+        const btn = document.createElement('button');
+        btn.className = 'bg-white border rounded-xl p-4 shadow text-center hover:bg-blue-100';
+        btn.innerHTML = `<strong>${product.name}</strong><br/>€${product.price.toFixed(2)}<br/>Voorraad: ${product.stock}`;
+        btn.addEventListener('click', () => addToCart(product));
+        productGrid.appendChild(btn);
       });
     }
 
-    let cart = [];
     function addToCart(product) {
-      const existing = cart.find(item => item.id === product.id);
-      if (existing) {
-        if (existing.quantity + 1 > product.stock) {
-          alert("Niet genoeg voorraad");
+      const item = currentCart.find(p => p.id === product.id);
+      if (item) {
+        if (item.quantity < product.stock) {
+          item.quantity++;
+        } else {
+          alert('Niet genoeg voorraad.');
           return;
         }
-        existing.quantity++;
       } else {
-        if (product.stock <= 0) {
-          alert("Product niet op voorraad");
+        if (product.stock > 0) {
+          currentCart.push({ ...product, quantity: 1 });
+        } else {
+          alert('Niet op voorraad.');
           return;
         }
-        cart.push({ ...product, quantity: 1 });
       }
-      renderCart();
+      updateCartDisplay();
     }
 
-    function renderCart() {
-      const cartDiv = document.getElementById("cart");
-      cartDiv.innerHTML = cart.map(p => `<div>${p.name} x${p.quantity}</div>`).join("");
+    function updateCartDisplay() {
+      cart.innerHTML = '<h3 class="text-lg font-semibold mb-2">Winkelmandje:</h3>';
+      currentCart.forEach(item => {
+        cart.innerHTML += `<p>${item.name} x ${item.quantity}</p>`;
+      });
     }
 
-    async function confirmOrder() {
-      if (!currentUser || cart.length === 0) return;
-
-      for (const item of cart) {
-        if ((item.stock || 0) < item.quantity) {
+    confirmOrderBtn.addEventListener('click', async () => {
+      for (const item of currentCart) {
+        const newStock = item.stock - item.quantity;
+        if (newStock < 0) {
           alert(`Niet genoeg voorraad voor ${item.name}`);
           return;
         }
+        await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
+        await supabase.from('logs').insert({ name: currentUser.name, code: currentUser.code, product: item.name, quantity: item.quantity });
       }
-
-      for (const item of cart) {
-        await supabaseClient.from("logs").insert({
-          name: currentUser.name,
-          product: item.name,
-          total: item.price * item.quantity
-        });
-        await supabaseClient.from("products").update({ stock: item.stock - item.quantity }).eq("id", item.id);
-      }
-
-      alert("Bestelling geplaatst!");
-      cart = [];
-      renderCart();
+      alert('Bestelling bevestigd!');
+      currentCart = [];
+      cart.innerHTML = '';
       loadProducts();
-    }
+    });
   </script>
 </body>
 </html>
