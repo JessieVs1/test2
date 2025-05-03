@@ -11,8 +11,20 @@
   <!-- Startscherm -->
   <div id="startScreen" class="flex flex-col gap-4">
     <h1 class="text-3xl font-bold text-center mb-4">Koelkast App</h1>
-    <button id="orderBtn" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-xl text-xl">Bestellen</button>
-    <button id="adminBtn" class="bg-green-500 hover:bg-green-600 text-white p-4 rounded-xl text-xl">Beheer</button>
+    <button id="orderBtn" onclick="showPopup('user')" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-xl text-xl">Bestellen</button>
+    <button id="adminBtn" onclick="showPopup('admin')" class="bg-green-500 hover:bg-green-600 text-white p-4 rounded-xl text-xl">Beheer</button>
+  </div>
+
+  <!-- Popups -->
+  <div id="popup" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white p-6 rounded shadow w-80">
+      <p id="popupText" class="mb-4"></p>
+      <input id="popupInput" class="w-full p-2 border rounded mb-4" type="password" />
+      <div class="flex justify-end gap-2">
+        <button onclick="closePopup()" class="px-4 py-2 bg-gray-300 rounded">Annuleer</button>
+        <button onclick="handlePopupSubmit()" class="px-4 py-2 bg-blue-500 text-white rounded">Doorgaan</button>
+      </div>
+    </div>
   </div>
 
   <!-- Bestelscherm -->
@@ -56,193 +68,111 @@
     </div>
   </div>
 
+  <!-- Scripts -->
   <script>
     const supabase = supabase.createClient(
       "https://nsevcinmxmaplnpyctht.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU"
     );
 
+    let popupType = "";
     let currentUser = null;
-    let cart = [];
 
-    function goBack() {
-      document.getElementById("startScreen").classList.remove("hidden");
-      document.getElementById("adminScreen").classList.add("hidden");
-      document.getElementById("orderScreen").classList.add("hidden");
-      cart = [];
+    function showPopup(type) {
+      popupType = type;
+      document.getElementById("popupText").innerText = type === "admin" ? "Voer de beheercode in:" : "Voer je gebruikerscode in:";
+      document.getElementById("popupInput").value = "";
+      document.getElementById("popup").classList.remove("hidden");
+      setTimeout(() => document.getElementById("popupInput").focus(), 50);
     }
 
-    document.getElementById("orderBtn").onclick = async () => {
-      const code = prompt("Voer gebruikerscode in:");
-      if (!code) return;
+    function closePopup() {
+      document.getElementById("popup").classList.add("hidden");
+      document.getElementById("popupInput").value = "";
+    }
 
-      const { data: users } = await supabase.from("users").select("*").eq("code", code);
-      if (users.length > 0) {
+    async function handlePopupSubmit() {
+      const code = document.getElementById("popupInput").value.trim();
+      if (popupType === "admin") {
+        if (code === "Admin123") {
+          closePopup();
+          document.getElementById("startScreen").classList.add("hidden");
+          document.getElementById("adminScreen").classList.remove("hidden");
+        } else {
+          alert("Verkeerde code");
+        }
+      } else if (popupType === "user") {
+        const { data: users, error } = await supabase.from("users").select().eq("code", code);
+        if (error || !users || users.length === 0) {
+          alert("Gebruiker niet gevonden");
+          return;
+        }
         currentUser = users[0];
+        document.getElementById("orderUserName").innerText = `Welkom, ${currentUser.name}`;
+        closePopup();
+        loadProducts();
         document.getElementById("startScreen").classList.add("hidden");
         document.getElementById("orderScreen").classList.remove("hidden");
-        document.getElementById("orderUserName").innerText = `Welkom, ${currentUser.name}`;
-        loadProducts();
-      } else {
-        alert("Ongeldige code.");
       }
-    };
-
-    document.getElementById("adminBtn").onclick = () => {
-      const code = prompt("Voer admin code in:");
-      if (code === "Admin123") {
-        document.getElementById("startScreen").classList.add("hidden");
-        document.getElementById("adminScreen").classList.remove("hidden");
-      } else {
-        alert("Ongeldige admin code.");
-      }
-    };
-
-    async function loadProducts() {
-      const { data: products } = await supabase.from("products").select("*");
-      document.getElementById("productGrid").innerHTML = products.map(p => `
-        <button onclick="addToCart(${p.id}, '${p.name}', ${p.price}, ${p.stock})" class="bg-white p-4 border rounded shadow hover:shadow-lg">
-          <div class="text-lg font-semibold">${p.name}</div>
-          <div class="text-sm text-gray-600">€${p.price.toFixed(2)}</div>
-        </button>
-      `).join("");
     }
 
-    function addToCart(id, name, price, stock) {
-      const existing = cart.find(item => item.id === id);
+    function goBack() {
+      document.getElementById("orderScreen").classList.add("hidden");
+      document.getElementById("adminScreen").classList.add("hidden");
+      document.getElementById("startScreen").classList.remove("hidden");
+    }
+
+    async function loadProducts() {
+      const { data: products } = await supabase.from("products").select();
+      const grid = document.getElementById("productGrid");
+      grid.innerHTML = "";
+      products.forEach(product => {
+        const btn = document.createElement("button");
+        btn.className = "border rounded p-2 bg-white hover:bg-gray-100 flex flex-col items-center";
+        btn.innerHTML = `<span>${product.name}</span><span class='text-sm text-gray-600'>€${product.price.toFixed(2)}</span>`;
+        btn.onclick = () => addToCart(product);
+        grid.appendChild(btn);
+      });
+    }
+
+    let cart = [];
+    function addToCart(product) {
+      const existing = cart.find(item => item.id === product.id);
       if (existing) {
-        if (existing.qty + 1 > stock) return alert("Niet genoeg voorraad!");
-        existing.qty++;
+        if (existing.quantity + 1 > product.stock) {
+          alert("Niet genoeg voorraad");
+          return;
+        }
+        existing.quantity++;
       } else {
-        if (stock < 1) return alert("Niet genoeg voorraad!");
-        cart.push({ id, name, price, qty: 1 });
+        if (product.stock <= 0) {
+          alert("Product niet op voorraad");
+          return;
+        }
+        cart.push({ ...product, quantity: 1 });
       }
       renderCart();
     }
 
     function renderCart() {
-      document.getElementById("cart").innerHTML = cart.map((item, index) => `
-        <div class="flex justify-between items-center mb-1">
-          <span>${item.name} x${item.qty} (€${(item.qty * item.price).toFixed(2)})</span>
-          <div class="flex gap-1">
-            <button onclick="changeQty(${index}, -1)" class="bg-gray-300 px-2 rounded">-</button>
-            <button onclick="changeQty(${index}, 1)" class="bg-gray-300 px-2 rounded">+</button>
-          </div>
-        </div>
-      `).join("");
-    }
-
-    function changeQty(index, delta) {
-      const item = cart[index];
-      item.qty += delta;
-      if (item.qty < 1) cart.splice(index, 1);
-      renderCart();
+      const cartDiv = document.getElementById("cart");
+      cartDiv.innerHTML = cart.map(p => `<div>${p.name} x${p.quantity}</div>`).join("");
     }
 
     async function confirmOrder() {
-      for (let item of cart) {
-        const { data: [product] } = await supabase.from("products").select("stock").eq("id", item.id);
-        if (!product || product.stock < item.qty) {
-          alert(`Niet genoeg voorraad voor ${item.name}`);
-          return;
-        }
-      }
-
-      for (let item of cart) {
+      if (!currentUser || cart.length === 0) return;
+      for (const item of cart) {
         await supabase.from("logs").insert({
           name: currentUser.name,
           product: item.name,
-          total: item.price * item.qty
+          total: item.price * item.quantity
         });
-        await supabase.from("products")
-          .update({ stock: supabase.literal(`stock - ${item.qty}`) })
-          .eq("id", item.id);
+        await supabase.from("products").update({ stock: item.stock - item.quantity }).eq("id", item.id);
       }
-
       alert("Bestelling geplaatst!");
-      goBack();
-    }
-
-    async function loadUsers() {
-      const { data: users } = await supabase.from("users").select("*");
-      document.getElementById("userList").innerHTML = users.map(u => `
-        <div class="flex gap-2 items-center">
-          <span>${u.name} (${u.code})</span>
-          <button onclick="deleteUser(${u.id})" class="text-red-500">Verwijder</button>
-        </div>
-      `).join("");
-    }
-
-    async function addUser() {
-      const name = document.getElementById("newUserName").value;
-      const code = document.getElementById("newUserCode").value;
-      if (!name || !code) return alert("Naam en code vereist");
-      await supabase.from("users").insert({ name, code });
-      loadUsers();
-    }
-
-    async function deleteUser(id) {
-      await supabase.from("users").delete().eq("id", id);
-      loadUsers();
-    }
-
-    async function loadProductsAdmin() {
-      const { data: products } = await supabase.from("products").select("*");
-      document.getElementById("adminProductList").innerHTML = products.map(p => `
-        <div class="flex gap-2 items-center">
-          <span>${p.name} - €${p.price.toFixed(2)} - voorraad: ${p.stock}</span>
-          <button onclick="deleteProduct(${p.id})" class="text-red-500">Verwijder</button>
-        </div>
-      `).join("");
-    }
-
-    async function addProduct() {
-      const name = document.getElementById("newProductName").value;
-      const price = parseFloat(document.getElementById("newProductPrice").value);
-      const stock = parseInt(document.getElementById("newProductStock").value);
-      if (!name || isNaN(price) || isNaN(stock)) return alert("Alle velden zijn verplicht");
-      await supabase.from("products").insert({ name, price, stock });
-      loadProductsAdmin();
-    }
-
-    async function deleteProduct(id) {
-      await supabase.from("products").delete().eq("id", id);
-      loadProductsAdmin();
-    }
-
-    async function loadStock() {
-      const { data: products } = await supabase.from("products").select("id, name, stock");
-      document.getElementById("stockList").innerHTML = products.map(p => `
-        <div class="flex items-center gap-2">
-          <span>${p.name}: ${p.stock}</span>
-          <input type="number" id="stock-${p.id}" value="${p.stock}" class="w-20 p-1 border rounded" />
-          <button onclick="updateStock(${p.id})" class="bg-blue-500 text-white px-2 py-1 rounded">Opslaan</button>
-        </div>
-      `).join("");
-    }
-
-    async function updateStock(id) {
-      const newStock = parseInt(document.getElementById(`stock-${id}`).value);
-      if (isNaN(newStock)) return alert("Ongeldige voorraad");
-      await supabase.from("products").update({ stock: newStock }).eq("id", id);
-      loadStock();
-    }
-
-    async function loadLogs() {
-      const { data: logs } = await supabase.from("logs").select("name, product, total");
-      const grouped = {};
-      logs.forEach(log => {
-        if (!grouped[log.name]) grouped[log.name] = {};
-        if (!grouped[log.name][log.product]) grouped[log.name][log.product] = { count: 0, total: 0 };
-        grouped[log.name][log.product].count++;
-        grouped[log.name][log.product].total += log.total;
-      });
-      const output = Object.entries(grouped).map(([name, products]) => {
-        const lines = Object.entries(products).map(([prod, info]) => `${prod} x${info.count}`).join(", ");
-        const total = Object.values(products).reduce((sum, p) => sum + p.total, 0);
-        return `<div class="border p-2 rounded mb-2"><strong>${name}</strong>: ${lines} <br>Totaal: €${total.toFixed(2)}</div>`;
-      }).join("");
-      document.getElementById("logList").innerHTML = output;
+      cart = [];
+      renderCart();
+      loadProducts();
     }
   </script>
 </body>
