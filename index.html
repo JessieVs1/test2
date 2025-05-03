@@ -1,210 +1,248 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Koelkast App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <style>
-    body {
-      font-family: sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f0f4f8;
-    }
-    .container {
-      display: none;
-      padding: 2rem;
-      text-align: center;
-    }
-    .container.active {
-      display: block;
-    }
-    .center-buttons button {
-      margin: 1rem;
-      padding: 1rem 2rem;
-      font-size: 1.2rem;
-    }
-    #productContainer {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 1rem;
-      padding: 1rem;
-    }
-    .product-tile {
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      padding: 1rem;
-      background: #ffffff;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .product-tile button {
-      margin-top: 1rem;
-    }
-    .overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.6);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-    .overlay.active {
-      display: flex;
-    }
-    .popup {
-      background: white;
-      padding: 2rem;
-      border-radius: 12px;
-      text-align: center;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-    input, button {
-      padding: 0.5rem;
-      margin: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      box-sizing: border-box;
-    }
-    table {
-      margin: auto;
-      border-collapse: collapse;
-      width: 90%;
-      background-color: white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    table th, table td {
-      padding: 0.75rem;
-      border: 1px solid #ddd;
-    }
-    table th {
-      background-color: #f8fafc;
-    }
-  </style>
 </head>
-<body>
-  <div id="startscherm" class="container active">
-    <h1 class="text-2xl font-bold mb-4">Welkom bij de Koelkast App</h1>
-    <div class="center-buttons">
-      <button onclick="toonCodePopup('bestellen')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Bestellen</button>
-      <button onclick="toonCodePopup('beheer')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">Beheer</button>
-    </div>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+  <!-- Startscherm -->
+  <div id="startScreen" class="flex flex-col gap-4">
+    <h1 class="text-3xl font-bold text-center mb-4">Koelkast App</h1>
+    <button id="orderBtn" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-xl text-xl">Bestellen</button>
+    <button id="adminBtn" class="bg-green-500 hover:bg-green-600 text-white p-4 rounded-xl text-xl">Beheer</button>
   </div>
 
-  <div id="codeOverlay" class="overlay">
-    <div class="popup">
-      <h2 class="text-lg font-bold mb-2">Voer je code in</h2>
-      <input type="text" id="codeInput" placeholder="Code...">
-      <div>
-        <button onclick="verwerkCode()" class="bg-blue-500 text-white px-4 py-2 rounded">OK</button>
-        <button onclick="sluitCodePopup()" class="bg-gray-400 text-white px-4 py-2 rounded">Annuleer</button>
+  <!-- Bestelscherm -->
+  <div id="orderScreen" class="hidden w-full">
+    <h2 class="text-2xl font-semibold mb-2">Bestelscherm</h2>
+    <p id="orderUserName" class="mb-4 text-gray-700"></p>
+    <div id="productGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
+    <div id="cart" class="mb-4"></div>
+    <button onclick="confirmOrder()" class="bg-blue-600 text-white px-4 py-2 rounded">Bevestig Bestelling</button>
+    <button onclick="goBack()" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded mt-2">Terug</button>
+  </div>
+
+  <!-- Beheerscherm -->
+  <div id="adminScreen" class="hidden w-full">
+    <h2 class="text-2xl font-semibold mb-4">Beheerscherm</h2>
+    <div class="flex flex-col gap-2">
+      <button onclick="loadUsers()" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded">Gebruikers beheren</button>
+      <div id="userList" class="mb-4"></div>
+      <div class="flex gap-2 mb-4">
+        <input id="newUserName" placeholder="Naam" class="p-2 border rounded" />
+        <input id="newUserCode" placeholder="Code" class="p-2 border rounded" />
+        <button onclick="addUser()" class="bg-green-600 text-white px-2 py-1 rounded">Toevoegen</button>
       </div>
+
+      <button onclick="loadProductsAdmin()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded">Producten beheren</button>
+      <div id="adminProductList" class="mb-4"></div>
+      <div class="flex gap-2 mb-4">
+        <input id="newProductName" placeholder="Productnaam" class="p-2 border rounded" />
+        <input id="newProductPrice" type="number" placeholder="Prijs" class="p-2 border rounded" />
+        <input id="newProductStock" type="number" placeholder="Voorraad" class="p-2 border rounded" />
+        <button onclick="addProduct()" class="bg-green-600 text-white px-2 py-1 rounded">Toevoegen</button>
+      </div>
+
+      <button onclick="loadStock()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded">Voorraad beheren</button>
+      <div id="stockList" class="mb-4"></div>
+
+      <button onclick="loadLogs()" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded">Bestellog bekijken</button>
+      <div id="logList" class="mb-4"></div>
+
+      <button onclick="goBack()" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded mt-2">Terug</button>
     </div>
-  </div>
-
-  <div id="bestelscherm" class="container">
-    <h2 class="text-xl font-bold mb-4">Bestellen</h2>
-    <div id="productContainer"></div>
-    <button onclick="toonStartscherm()" class="bg-gray-300 px-4 py-2 rounded mt-4">Terug</button>
-  </div>
-
-  <div id="beheerscherm" class="container">
-    <h2 class="text-xl font-bold mb-4">Beheer</h2>
-    <table>
-      <thead><tr><th>Naam</th><th>Gebruiker</th><th>Datum</th></tr></thead>
-      <tbody id="logTabel"></tbody>
-    </table>
-    <button onclick="toonStartscherm()" class="bg-gray-300 px-4 py-2 rounded mt-4">Terug</button>
   </div>
 
   <script>
-    const { createClient } = window.supabase;
+    const supabase = supabase.createClient(
+      "https://nsevcinmxmaplnpyctht.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU"
+    );
 
-    // ✅ VUL HIER JE SUPABASE GEGEVENS IN:
-    // Ga naar https://app.supabase.com > jouw project > Settings > API
-    // En vervang onderstaande waarden:
-    const SUPABASE_URL = 'https://nsevcinmxmaplnpyctht.supabase.co'; // <-- Vervang dit
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU'; // <-- Vervang dit
+    let currentUser = null;
+    let cart = [];
 
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    let doelActie = '';
-    let gebruikersCode = '';
-
-    function toonCodePopup(actie) {
-      doelActie = actie;
-      document.getElementById('codeInput').value = '';
-      document.getElementById('codeOverlay').classList.add('active');
+    function goBack() {
+      document.getElementById("startScreen").classList.remove("hidden");
+      document.getElementById("adminScreen").classList.add("hidden");
+      document.getElementById("orderScreen").classList.add("hidden");
+      cart = [];
     }
 
-    function sluitCodePopup() {
-      document.getElementById('codeOverlay').classList.remove('active');
-    }
+    document.getElementById("orderBtn").onclick = async () => {
+      const code = prompt("Voer gebruikerscode in:");
+      if (!code) return;
 
-    async function verwerkCode() {
-      const code = document.getElementById('codeInput').value.trim();
-      const { data: gebruiker, error } = await supabaseClient.from('gebruikers').select().eq('code', code).maybeSingle();
-      if (gebruiker) {
-        gebruikersCode = gebruiker.code;
-        sluitCodePopup();
-        if (doelActie === 'bestellen') {
-          toonBestelscherm();
-        } else if (doelActie === 'beheer' && gebruiker.rol === 'admin') {
-          toonBeheerscherm();
-        } else {
-          alert('Geen toegang tot beheer');
-        }
+      const { data: users } = await supabase.from("users").select("*").eq("code", code);
+      if (users.length > 0) {
+        currentUser = users[0];
+        document.getElementById("startScreen").classList.add("hidden");
+        document.getElementById("orderScreen").classList.remove("hidden");
+        document.getElementById("orderUserName").innerText = `Welkom, ${currentUser.name}`;
+        loadProducts();
       } else {
-        alert('Ongeldige code');
+        alert("Ongeldige code.");
       }
-    }
+    };
 
-    function toonStartscherm() {
-      document.querySelectorAll('.container').forEach(el => el.classList.remove('active'));
-      document.getElementById('startscherm').classList.add('active');
-    }
-
-    async function toonBestelscherm() {
-      document.querySelectorAll('.container').forEach(el => el.classList.remove('active'));
-      document.getElementById('bestelscherm').classList.add('active');
-      const { data: producten, error } = await supabaseClient.from('producten').select();
-      const container = document.getElementById('productContainer');
-      container.innerHTML = '';
-      producten.forEach(product => {
-        const div = document.createElement('div');
-        div.className = 'product-tile';
-        div.innerHTML = `
-          <h3 class="font-bold">${product.naam}</h3>
-          <p>Voorraad: ${product.voorraad}</p>
-          <button class="bg-blue-500 text-white px-4 py-2 rounded" onclick="bestelProduct(${product.id})">Bestel</button>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    async function bestelProduct(productId) {
-      const { data: product } = await supabaseClient.from('producten').select().eq('id', productId).single();
-      if (product.voorraad <= 0) {
-        alert('Product niet op voorraad');
-        return;
+    document.getElementById("adminBtn").onclick = () => {
+      const code = prompt("Voer admin code in:");
+      if (code === "Admin123") {
+        document.getElementById("startScreen").classList.add("hidden");
+        document.getElementById("adminScreen").classList.remove("hidden");
+      } else {
+        alert("Ongeldige admin code.");
       }
-      await supabaseClient.from('producten').update({ voorraad: product.voorraad - 1 }).eq('id', productId);
-      await supabaseClient.from('logs').insert([{ naam: product.naam, gebruiker: gebruikersCode, datum: new Date().toISOString() }]);
-      toonBestelscherm();
+    };
+
+    async function loadProducts() {
+      const { data: products } = await supabase.from("products").select("*");
+      document.getElementById("productGrid").innerHTML = products.map(p => `
+        <button onclick="addToCart(${p.id}, '${p.name}', ${p.price}, ${p.stock})" class="bg-white p-4 border rounded shadow hover:shadow-lg">
+          <div class="text-lg font-semibold">${p.name}</div>
+          <div class="text-sm text-gray-600">€${p.price.toFixed(2)}</div>
+        </button>
+      `).join("");
     }
 
-    async function toonBeheerscherm() {
-      document.querySelectorAll('.container').forEach(el => el.classList.remove('active'));
-      document.getElementById('beheerscherm').classList.add('active');
-      const { data: logs } = await supabaseClient.from('logs').select().order('datum', { ascending: false });
-      const tabel = document.getElementById('logTabel');
-      tabel.innerHTML = '';
+    function addToCart(id, name, price, stock) {
+      const existing = cart.find(item => item.id === id);
+      if (existing) {
+        if (existing.qty + 1 > stock) return alert("Niet genoeg voorraad!");
+        existing.qty++;
+      } else {
+        if (stock < 1) return alert("Niet genoeg voorraad!");
+        cart.push({ id, name, price, qty: 1 });
+      }
+      renderCart();
+    }
+
+    function renderCart() {
+      document.getElementById("cart").innerHTML = cart.map((item, index) => `
+        <div class="flex justify-between items-center mb-1">
+          <span>${item.name} x${item.qty} (€${(item.qty * item.price).toFixed(2)})</span>
+          <div class="flex gap-1">
+            <button onclick="changeQty(${index}, -1)" class="bg-gray-300 px-2 rounded">-</button>
+            <button onclick="changeQty(${index}, 1)" class="bg-gray-300 px-2 rounded">+</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function changeQty(index, delta) {
+      const item = cart[index];
+      item.qty += delta;
+      if (item.qty < 1) cart.splice(index, 1);
+      renderCart();
+    }
+
+    async function confirmOrder() {
+      for (let item of cart) {
+        const { data: [product] } = await supabase.from("products").select("stock").eq("id", item.id);
+        if (!product || product.stock < item.qty) {
+          alert(`Niet genoeg voorraad voor ${item.name}`);
+          return;
+        }
+      }
+
+      for (let item of cart) {
+        await supabase.from("logs").insert({
+          name: currentUser.name,
+          product: item.name,
+          total: item.price * item.qty
+        });
+        await supabase.from("products")
+          .update({ stock: supabase.literal(`stock - ${item.qty}`) })
+          .eq("id", item.id);
+      }
+
+      alert("Bestelling geplaatst!");
+      goBack();
+    }
+
+    async function loadUsers() {
+      const { data: users } = await supabase.from("users").select("*");
+      document.getElementById("userList").innerHTML = users.map(u => `
+        <div class="flex gap-2 items-center">
+          <span>${u.name} (${u.code})</span>
+          <button onclick="deleteUser(${u.id})" class="text-red-500">Verwijder</button>
+        </div>
+      `).join("");
+    }
+
+    async function addUser() {
+      const name = document.getElementById("newUserName").value;
+      const code = document.getElementById("newUserCode").value;
+      if (!name || !code) return alert("Naam en code vereist");
+      await supabase.from("users").insert({ name, code });
+      loadUsers();
+    }
+
+    async function deleteUser(id) {
+      await supabase.from("users").delete().eq("id", id);
+      loadUsers();
+    }
+
+    async function loadProductsAdmin() {
+      const { data: products } = await supabase.from("products").select("*");
+      document.getElementById("adminProductList").innerHTML = products.map(p => `
+        <div class="flex gap-2 items-center">
+          <span>${p.name} - €${p.price.toFixed(2)} - voorraad: ${p.stock}</span>
+          <button onclick="deleteProduct(${p.id})" class="text-red-500">Verwijder</button>
+        </div>
+      `).join("");
+    }
+
+    async function addProduct() {
+      const name = document.getElementById("newProductName").value;
+      const price = parseFloat(document.getElementById("newProductPrice").value);
+      const stock = parseInt(document.getElementById("newProductStock").value);
+      if (!name || isNaN(price) || isNaN(stock)) return alert("Alle velden zijn verplicht");
+      await supabase.from("products").insert({ name, price, stock });
+      loadProductsAdmin();
+    }
+
+    async function deleteProduct(id) {
+      await supabase.from("products").delete().eq("id", id);
+      loadProductsAdmin();
+    }
+
+    async function loadStock() {
+      const { data: products } = await supabase.from("products").select("id, name, stock");
+      document.getElementById("stockList").innerHTML = products.map(p => `
+        <div class="flex items-center gap-2">
+          <span>${p.name}: ${p.stock}</span>
+          <input type="number" id="stock-${p.id}" value="${p.stock}" class="w-20 p-1 border rounded" />
+          <button onclick="updateStock(${p.id})" class="bg-blue-500 text-white px-2 py-1 rounded">Opslaan</button>
+        </div>
+      `).join("");
+    }
+
+    async function updateStock(id) {
+      const newStock = parseInt(document.getElementById(`stock-${id}`).value);
+      if (isNaN(newStock)) return alert("Ongeldige voorraad");
+      await supabase.from("products").update({ stock: newStock }).eq("id", id);
+      loadStock();
+    }
+
+    async function loadLogs() {
+      const { data: logs } = await supabase.from("logs").select("name, product, total");
+      const grouped = {};
       logs.forEach(log => {
-        const rij = document.createElement('tr');
-        rij.innerHTML = `<td>${log.naam}</td><td>${log.gebruiker}</td><td>${new Date(log.datum).toLocaleString()}</td>`;
-        tabel.appendChild(rij);
+        if (!grouped[log.name]) grouped[log.name] = {};
+        if (!grouped[log.name][log.product]) grouped[log.name][log.product] = { count: 0, total: 0 };
+        grouped[log.name][log.product].count++;
+        grouped[log.name][log.product].total += log.total;
       });
+      const output = Object.entries(grouped).map(([name, products]) => {
+        const lines = Object.entries(products).map(([prod, info]) => `${prod} x${info.count}`).join(", ");
+        const total = Object.values(products).reduce((sum, p) => sum + p.total, 0);
+        return `<div class="border p-2 rounded mb-2"><strong>${name}</strong>: ${lines} <br>Totaal: €${total.toFixed(2)}</div>`;
+      }).join("");
+      document.getElementById("logList").innerHTML = output;
     }
   </script>
 </body>
