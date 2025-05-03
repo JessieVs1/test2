@@ -11,8 +11,8 @@
   <!-- Startscherm -->
   <div id="startScreen" class="flex flex-col gap-4">
     <h1 class="text-3xl font-bold text-center mb-4">Koelkast App</h1>
-    <button id="orderBtn" onclick="showPopup('user')" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-xl text-xl">Bestellen</button>
-    <button id="adminBtn" onclick="showPopup('admin')" class="bg-green-500 hover:bg-green-600 text-white p-4 rounded-xl text-xl">Beheer</button>
+    <button id="orderBtn" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-xl text-xl">Bestellen</button>
+    <button id="adminBtn" class="bg-green-500 hover:bg-green-600 text-white p-4 rounded-xl text-xl">Beheer</button>
   </div>
 
   <!-- Popups -->
@@ -78,6 +78,11 @@
     let popupType = "";
     let currentUser = null;
 
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("orderBtn").addEventListener("click", () => showPopup("user"));
+      document.getElementById("adminBtn").addEventListener("click", () => showPopup("admin"));
+    });
+
     function showPopup(type) {
       popupType = type;
       document.getElementById("popupText").innerText = type === "admin" ? "Voer de beheercode in:" : "Voer je gebruikerscode in:";
@@ -93,6 +98,10 @@
 
     async function handlePopupSubmit() {
       const code = document.getElementById("popupInput").value.trim();
+      if (!code) {
+        alert("Vul een code in.");
+        return;
+      }
       if (popupType === "admin") {
         if (code === "Admin123") {
           closePopup();
@@ -123,7 +132,7 @@
     }
 
     async function loadProducts() {
-      const { data: products } = await supabase.from("products").select();
+      const { data: products } = await supabase.from("products").select("id, name, price, stock");
       const grid = document.getElementById("productGrid");
       grid.innerHTML = "";
       products.forEach(product => {
@@ -161,6 +170,16 @@
 
     async function confirmOrder() {
       if (!currentUser || cart.length === 0) return;
+
+      // Controleer voorraad vooraf
+      for (const item of cart) {
+        if ((item.stock || 0) < item.quantity) {
+          alert(`Niet genoeg voorraad voor ${item.name}`);
+          return;
+        }
+      }
+
+      // Alles is op voorraad, verwerk bestelling
       for (const item of cart) {
         await supabase.from("logs").insert({
           name: currentUser.name,
@@ -169,6 +188,7 @@
         });
         await supabase.from("products").update({ stock: item.stock - item.quantity }).eq("id", item.id);
       }
+
       alert("Bestelling geplaatst!");
       cart = [];
       renderCart();
