@@ -70,7 +70,8 @@
 
   <!-- Scripts -->
   <script>
-    const supabase = supabase.createClient(
+    const { createClient } = supabase;
+    const supabaseClient = createClient(
       "https://nsevcinmxmaplnpyctht.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU"
     );
@@ -111,7 +112,7 @@
           alert("Verkeerde code");
         }
       } else if (popupType === "user") {
-        const { data: users, error } = await supabase.from("users").select().eq("code", code);
+        const { data: users, error } = await supabaseClient.from("users").select().eq("code", code);
         if (error || !users || users.length === 0) {
           alert("Gebruiker niet gevonden");
           return;
@@ -132,7 +133,7 @@
     }
 
     async function loadProducts() {
-      const { data: products } = await supabase.from("products").select("id, name, price, stock");
+      const { data: products } = await supabaseClient.from("products").select("id, name, price, stock");
       const grid = document.getElementById("productGrid");
       grid.innerHTML = "";
       products.forEach(product => {
@@ -171,7 +172,6 @@
     async function confirmOrder() {
       if (!currentUser || cart.length === 0) return;
 
-      // Controleer voorraad vooraf
       for (const item of cart) {
         if ((item.stock || 0) < item.quantity) {
           alert(`Niet genoeg voorraad voor ${item.name}`);
@@ -179,14 +179,13 @@
         }
       }
 
-      // Alles is op voorraad, verwerk bestelling
       for (const item of cart) {
-        await supabase.from("logs").insert({
+        await supabaseClient.from("logs").insert({
           name: currentUser.name,
           product: item.name,
           total: item.price * item.quantity
         });
-        await supabase.from("products").update({ stock: item.stock - item.quantity }).eq("id", item.id);
+        await supabaseClient.from("products").update({ stock: item.stock - item.quantity }).eq("id", item.id);
       }
 
       alert("Bestelling geplaatst!");
