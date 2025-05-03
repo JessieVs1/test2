@@ -2,219 +2,30 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
-  <title>Koelkast App</title>
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to right, #74ebd5, #acb6e5);
-    }
-    body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .container {
-      padding: 20px;
-      display: none;
-      width: 90%;
-      max-width: 800px;
-      max-height: 90vh;
-      overflow-y: auto;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    }
-    .container.active {
-      display: block;
-    }
-    h1, h2, h3 {
-      text-align: center;
-    }
-    .center-buttons {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 300px;
-      gap: 15px;
-    }
-    button {
-      display: inline-block;
-      padding: 15px 30px;
-      font-size: 18px;
-      cursor: pointer;
-      background-color: #3498db;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      transition: background 0.3s;
-    }
-    button:hover {
-      background-color: #2980b9;
-    }
-    button.back {
-      background-color: #95a5a6;
-    }
-    button.verwijder {
-      background-color: #e74c3c;
-    }
-    button.reset {
-      background-color: #f39c12;
-    }
-    input {
-      padding: 10px;
-      margin: 5px;
-      width: 200px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    table, th, td {
-      border: 1px solid #ccc;
-    }
-    th, td {
-      padding: 8px;
-      text-align: center;
-    }
-    .beheer-sectie {
-      margin-bottom: 30px;
-    }
-    .product-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 15px;
-      margin-top: 20px;
-    }
-    .product-tile {
-      background-color: #ecf0f1;
-      border-radius: 10px;
-      padding: 15px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .product-tile button {
-      margin-top: 10px;
-    }
-    .overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-    .overlay.active {
-      display: flex;
-    }
-    .popup {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      text-align: center;
-    }
-    .succesmelding {
-      margin-top: 20px;
-      text-align: center;
-      color: green;
-      font-weight: bold;
-    }
-  </style>
-</head>
-<body>
-  <div id="startscherm" class="container active">
-    <h1>Welkom bij de Koelkast App</h1>
-    <div class="center-buttons">
-      <button onclick="toonCodePopup('bestellen')">Bestellen</button>
-      <button onclick="toonCodePopup('beheer')">Beheer</button>
-    </div>
-  </div>
-
-  <div id="bestelscherm" class="container">
-    <h2>Bestel Producten</h2>
-    <div class="product-grid" id="productContainer"></div>
-    <div id="bestelMelding" class="succesmelding"></div>
-    <button class="back" onclick="terugNaarStart()">Terug</button>
-  </div>
-
-  <div id="beheerscherm" class="container">
-    <h2>Beheer</h2>
-    <div class="beheer-sectie">
-      <h3>Voorraad aanpassen</h3>
-      <table id="voorraadTabel">
-        <thead><tr><th>Product</th><th>Aantal</th><th>Actie</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="beheer-sectie">
-      <h3>Logs</h3>
-      <table id="logsTabel">
-        <thead><tr><th>Gebruiker</th><th>Product</th><th>Tijd</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <button class="reset" onclick="resetLogs()">Reset Logs</button>
-    </div>
-    <div class="beheer-sectie">
-      <h3>Gebruikers</h3>
-      <table>
-        <thead><tr><th>Code</th><th>Naam</th></tr></thead>
-        <tbody id="gebruikersTabel"></tbody>
-      </table>
-    </div>
-    <button class="back" onclick="terugNaarStart()">Terug</button>
-  </div>
-
-  <div id="codeOverlay" class="overlay">
-    <div class="popup">
-      <h3>Voer toegangscode in</h3>
-      <input type="password" id="codeInput" placeholder="Code">
-      <br>
-      <button onclick="verifieerCode()">Ga verder</button>
-    </div>
-  </div>
-
+  <title>Koelkast App met Supabase</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    const gebruikers = {
-      "123": "Jessie",
-      "456": "Precious",
-      "789": "Justin",
-      "234": "Lorenzo",
-      "567": "Niels",
-      "890": "DanielG",
-      "345": "Timo",
-      "678": "Tom",
-      "901": "Jasper",
-      "112": "Rutger",
-      "223": "DanielS",
-      "334": "Bert"
-    };
+    const supabaseUrl = 'https://jouw-project-id.supabase.co'; // Vervang dit
+    const supabaseKey = 'jouw-anon-public-key'; // Vervang dit
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-    const voorraad = JSON.parse(localStorage.getItem('voorraad')) || {
-      Cola: 10,
-      Bier: 15,
-      Water: 20
-    };
-
-    let logs = JSON.parse(localStorage.getItem('logs')) || [];
-    logs = logs.filter(log => log && log.code && log.product);
-    localStorage.setItem('logs', JSON.stringify(logs));
-
+    const gebruikers = {};
+    let actieveGebruiker = null;
     let doelActie = '';
 
-    function toonCodePopup(actie) {
+    async function laadGebruikers() {
+      const { data, error } = await supabase.from('gebruikers').select('*');
+      if (!error) {
+        data.forEach(g => gebruikers[g.code] = g.naam);
+      }
+    }
+
+    async function toonCodePopup(actie) {
       doelActie = actie;
       document.getElementById('codeOverlay').classList.add('active');
     }
 
-    function verifieerCode() {
+    async function verifieerCode() {
       const code = document.getElementById('codeInput').value.trim();
       document.getElementById('codeInput').value = '';
       document.getElementById('codeOverlay').classList.remove('active');
@@ -222,7 +33,7 @@
       if (doelActie === 'beheer' && code === 'Admin123') {
         laadVoorraad();
         laadLogs();
-        laadGebruikers();
+        laadGebruikersTabel();
         wisselScherm('beheerscherm');
       } else if (doelActie === 'bestellen' && gebruikers[code]) {
         actieveGebruiker = code;
@@ -238,17 +49,14 @@
       document.getElementById(id).classList.add('active');
     }
 
-    function terugNaarStart() {
-      wisselScherm('startscherm');
-    }
-
-    function laadProducten() {
+    async function laadProducten() {
+      const { data: producten, error } = await supabase.from('producten').select('*');
       const container = document.getElementById('productContainer');
       container.innerHTML = '';
-      Object.keys(voorraad).forEach(product => {
+      producten.forEach(product => {
         const tile = document.createElement('div');
         tile.className = 'product-tile';
-        tile.innerHTML = `<strong>${product}</strong><p>Voorraad: ${voorraad[product]}</p>`;
+        tile.innerHTML = `<strong>${product.naam}</strong><p>Voorraad: ${product.aantal}</p>`;
         const knop = document.createElement('button');
         knop.innerText = 'Bestel';
         knop.onclick = () => bestelProduct(product);
@@ -257,75 +65,119 @@
       });
     }
 
-    let actieveGebruiker = null;
-
-    function bestelProduct(product) {
-      if (voorraad[product] > 0) {
-        voorraad[product]--;
-        localStorage.setItem('voorraad', JSON.stringify(voorraad));
-        const tijd = new Date().toLocaleString();
-        logs.push({ code: actieveGebruiker, product, tijd });
-        localStorage.setItem('logs', JSON.stringify(logs));
-        document.getElementById('bestelMelding').textContent = 'Bestelling succesvol geplaatst!';
-        setTimeout(() => {
-          document.getElementById('bestelMelding').textContent = '';
-        }, 3000);
-        laadProducten();
-      } else {
-        alert('Product niet op voorraad.');
+    async function bestelProduct(product) {
+      if (product.aantal <= 0) {
+        alert('Niet op voorraad!');
+        return;
       }
+
+      await supabase.from('producten').update({ aantal: product.aantal - 1 }).eq('id', product.id);
+      await supabase.from('logs').insert([{ gebruiker_code: actieveGebruiker, product_naam: product.naam }]);
+      laadProducten();
+      document.getElementById('bestelMelding').textContent = 'Bestelling geplaatst!';
+      setTimeout(() => document.getElementById('bestelMelding').textContent = '', 3000);
     }
 
-    function laadVoorraad() {
+    async function laadVoorraad() {
+      const { data: producten } = await supabase.from('producten').select('*');
       const tbody = document.querySelector('#voorraadTabel tbody');
       tbody.innerHTML = '';
-      Object.entries(voorraad).forEach(([product, aantal]) => {
+      producten.forEach(p => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${product}</td>
-          <td><input type="number" value="${aantal}" onchange="wijzigVoorraad('${product}', this.value)"></td>
-          <td><button class="verwijder" onclick="verwijderProduct('${product}')">Verwijder</button></td>
+          <td>${p.naam}</td>
+          <td><input type="number" value="${p.aantal}" onchange="wijzigVoorraad('${p.id}', this.value)"></td>
+          <td><button class="verwijder" onclick="verwijderProduct('${p.id}')">Verwijder</button></td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    function wijzigVoorraad(product, value) {
-      voorraad[product] = parseInt(value) || 0;
-      localStorage.setItem('voorraad', JSON.stringify(voorraad));
+    async function wijzigVoorraad(id, waarde) {
+      await supabase.from('producten').update({ aantal: parseInt(waarde) }).eq('id', id);
     }
 
-    function verwijderProduct(product) {
-      delete voorraad[product];
-      localStorage.setItem('voorraad', JSON.stringify(voorraad));
+    async function verwijderProduct(id) {
+      await supabase.from('producten').delete().eq('id', id);
       laadVoorraad();
     }
 
-    function laadLogs() {
+    async function laadLogs() {
+      const { data: logs } = await supabase.from('logs').select('*').order('tijd', { ascending: false });
       const tbody = document.querySelector('#logsTabel tbody');
       tbody.innerHTML = '';
       logs.forEach(log => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${gebruikers[log.code] || 'Onbekend'}</td><td>${log.product}</td><td>${log.tijd}</td>`;
+        tr.innerHTML = `<td>${gebruikers[log.gebruiker_code] || 'Onbekend'}</td><td>${log.product_naam}</td><td>${new Date(log.tijd).toLocaleString()}</td>`;
         tbody.appendChild(tr);
       });
     }
 
-    function resetLogs() {
-      logs = [];
-      localStorage.setItem('logs', JSON.stringify(logs));
-      laadLogs();
-    }
-
-    function laadGebruikers() {
+    async function laadGebruikersTabel() {
+      const { data } = await supabase.from('gebruikers').select('*');
       const tbody = document.getElementById('gebruikersTabel');
       tbody.innerHTML = '';
-      Object.entries(gebruikers).forEach(([code, naam]) => {
+      data.forEach(g => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${code}</td><td>${naam}</td>`;
+        tr.innerHTML = `<td>${g.code}</td><td>${g.naam}</td>`;
         tbody.appendChild(tr);
       });
     }
+
+    window.onload = laadGebruikers;
   </script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    .container { display: none; padding: 20px; }
+    .container.active { display: block; }
+    .product-tile { border: 1px solid #ccc; padding: 10px; margin: 10px; display: inline-block; width: 150px; text-align: center; }
+    #codeOverlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; }
+    #codeOverlay.active { display: flex; }
+    #codeOverlay div { background: white; padding: 20px; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; }
+    td, th { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    .verwijder { color: red; }
+  </style>
+</head>
+<body>
+  <div id="startscherm" class="container active">
+    <h1>Welkom bij de Koelkast</h1>
+    <button onclick="toonCodePopup('bestellen')">Bestellen</button>
+    <button onclick="toonCodePopup('beheer')">Beheer</button>
+  </div>
+
+  <div id="bestelscherm" class="container">
+    <h2>Bestellen</h2>
+    <div id="productContainer"></div>
+    <p id="bestelMelding"></p>
+    <button onclick="wisselScherm('startscherm')">Terug</button>
+  </div>
+
+  <div id="beheerscherm" class="container">
+    <h2>Voorraadbeheer</h2>
+    <table id="voorraadTabel">
+      <thead><tr><th>Product</th><th>Aantal</th><th>Acties</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <h2>Bestelgeschiedenis</h2>
+    <table id="logsTabel">
+      <thead><tr><th>Naam</th><th>Product</th><th>Tijd</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <h2>Gebruikers</h2>
+    <table>
+      <thead><tr><th>Code</th><th>Naam</th></tr></thead>
+      <tbody id="gebruikersTabel"></tbody>
+    </table>
+    <button onclick="wisselScherm('startscherm')">Uitloggen</button>
+  </div>
+
+  <div id="codeOverlay">
+    <div>
+      <h3>Voer je code in</h3>
+      <input id="codeInput" type="text" placeholder="Gebruikers- of beheercode">
+      <button onclick="verifieerCode()">OK</button>
+    </div>
+  </div>
 </body>
 </html>
