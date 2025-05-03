@@ -2,182 +2,210 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
-  <title>Koelkast App met Supabase</title>
+  <title>Koelkast App</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script>
-    const supabaseUrl = 'https://jouw-project-id.supabase.co'; // Vervang dit
-    const supabaseKey = 'jouw-anon-public-key'; // Vervang dit
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-    const gebruikers = {};
-    let actieveGebruiker = null;
-    let doelActie = '';
-
-    async function laadGebruikers() {
-      const { data, error } = await supabase.from('gebruikers').select('*');
-      if (!error) {
-        data.forEach(g => gebruikers[g.code] = g.naam);
-      }
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f0f4f8;
     }
+    .container {
+      display: none;
+      padding: 2rem;
+      text-align: center;
+    }
+    .container.active {
+      display: block;
+    }
+    .center-buttons button {
+      margin: 1rem;
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+    }
+    #productContainer {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      padding: 1rem;
+    }
+    .product-tile {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 1rem;
+      background: #ffffff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .product-tile button {
+      margin-top: 1rem;
+    }
+    .overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .overlay.active {
+      display: flex;
+    }
+    .popup {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    input, button {
+      padding: 0.5rem;
+      margin: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    table {
+      margin: auto;
+      border-collapse: collapse;
+      width: 90%;
+      background-color: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    table th, table td {
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+    }
+    table th {
+      background-color: #f8fafc;
+    }
+  </style>
+</head>
+<body>
+  <div id="startscherm" class="container active">
+    <h1 class="text-2xl font-bold mb-4">Welkom bij de Koelkast App</h1>
+    <div class="center-buttons">
+      <button onclick="toonCodePopup('bestellen')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Bestellen</button>
+      <button onclick="toonCodePopup('beheer')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">Beheer</button>
+    </div>
+  </div>
 
-    async function toonCodePopup(actie) {
+  <div id="codeOverlay" class="overlay">
+    <div class="popup">
+      <h2 class="text-lg font-bold mb-2">Voer je code in</h2>
+      <input type="text" id="codeInput" placeholder="Code...">
+      <div>
+        <button onclick="verwerkCode()" class="bg-blue-500 text-white px-4 py-2 rounded">OK</button>
+        <button onclick="sluitCodePopup()" class="bg-gray-400 text-white px-4 py-2 rounded">Annuleer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bestelscherm" class="container">
+    <h2 class="text-xl font-bold mb-4">Bestellen</h2>
+    <div id="productContainer"></div>
+    <button onclick="toonStartscherm()" class="bg-gray-300 px-4 py-2 rounded mt-4">Terug</button>
+  </div>
+
+  <div id="beheerscherm" class="container">
+    <h2 class="text-xl font-bold mb-4">Beheer</h2>
+    <table>
+      <thead><tr><th>Naam</th><th>Gebruiker</th><th>Datum</th></tr></thead>
+      <tbody id="logTabel"></tbody>
+    </table>
+    <button onclick="toonStartscherm()" class="bg-gray-300 px-4 py-2 rounded mt-4">Terug</button>
+  </div>
+
+  <script>
+    const { createClient } = window.supabase;
+
+    // ✅ VUL HIER JE SUPABASE GEGEVENS IN:
+    // Ga naar https://app.supabase.com > jouw project > Settings > API
+    // En vervang onderstaande waarden:
+    const SUPABASE_URL = 'https://nsevcinmxmaplnpyctht.supabase.co'; // <-- Vervang dit
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU'; // <-- Vervang dit
+
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let doelActie = '';
+    let gebruikersCode = '';
+
+    function toonCodePopup(actie) {
       doelActie = actie;
+      document.getElementById('codeInput').value = '';
       document.getElementById('codeOverlay').classList.add('active');
     }
 
-    async function verifieerCode() {
-      const code = document.getElementById('codeInput').value.trim();
-      document.getElementById('codeInput').value = '';
+    function sluitCodePopup() {
       document.getElementById('codeOverlay').classList.remove('active');
+    }
 
-      if (doelActie === 'beheer' && code === 'Admin123') {
-        laadVoorraad();
-        laadLogs();
-        laadGebruikersTabel();
-        wisselScherm('beheerscherm');
-      } else if (doelActie === 'bestellen' && gebruikers[code]) {
-        actieveGebruiker = code;
-        laadProducten();
-        wisselScherm('bestelscherm');
+    async function verwerkCode() {
+      const code = document.getElementById('codeInput').value.trim();
+      const { data: gebruiker, error } = await supabaseClient.from('gebruikers').select().eq('code', code).maybeSingle();
+      if (gebruiker) {
+        gebruikersCode = gebruiker.code;
+        sluitCodePopup();
+        if (doelActie === 'bestellen') {
+          toonBestelscherm();
+        } else if (doelActie === 'beheer' && gebruiker.rol === 'admin') {
+          toonBeheerscherm();
+        } else {
+          alert('Geen toegang tot beheer');
+        }
       } else {
         alert('Ongeldige code');
       }
     }
 
-    function wisselScherm(id) {
-      document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
+    function toonStartscherm() {
+      document.querySelectorAll('.container').forEach(el => el.classList.remove('active'));
+      document.getElementById('startscherm').classList.add('active');
     }
 
-    async function laadProducten() {
-      const { data: producten, error } = await supabase.from('producten').select('*');
+    async function toonBestelscherm() {
+      document.querySelectorAll('.container').forEach(el => el.classList.remove('active'));
+      document.getElementById('bestelscherm').classList.add('active');
+      const { data: producten, error } = await supabaseClient.from('producten').select();
       const container = document.getElementById('productContainer');
       container.innerHTML = '';
       producten.forEach(product => {
-        const tile = document.createElement('div');
-        tile.className = 'product-tile';
-        tile.innerHTML = `<strong>${product.naam}</strong><p>Voorraad: ${product.aantal}</p>`;
-        const knop = document.createElement('button');
-        knop.innerText = 'Bestel';
-        knop.onclick = () => bestelProduct(product);
-        tile.appendChild(knop);
-        container.appendChild(tile);
+        const div = document.createElement('div');
+        div.className = 'product-tile';
+        div.innerHTML = `
+          <h3 class="font-bold">${product.naam}</h3>
+          <p>Voorraad: ${product.voorraad}</p>
+          <button class="bg-blue-500 text-white px-4 py-2 rounded" onclick="bestelProduct(${product.id})">Bestel</button>
+        `;
+        container.appendChild(div);
       });
     }
 
-    async function bestelProduct(product) {
-      if (product.aantal <= 0) {
-        alert('Niet op voorraad!');
+    async function bestelProduct(productId) {
+      const { data: product } = await supabaseClient.from('producten').select().eq('id', productId).single();
+      if (product.voorraad <= 0) {
+        alert('Product niet op voorraad');
         return;
       }
-
-      await supabase.from('producten').update({ aantal: product.aantal - 1 }).eq('id', product.id);
-      await supabase.from('logs').insert([{ gebruiker_code: actieveGebruiker, product_naam: product.naam }]);
-      laadProducten();
-      document.getElementById('bestelMelding').textContent = 'Bestelling geplaatst!';
-      setTimeout(() => document.getElementById('bestelMelding').textContent = '', 3000);
+      await supabaseClient.from('producten').update({ voorraad: product.voorraad - 1 }).eq('id', productId);
+      await supabaseClient.from('logs').insert([{ naam: product.naam, gebruiker: gebruikersCode, datum: new Date().toISOString() }]);
+      toonBestelscherm();
     }
 
-    async function laadVoorraad() {
-      const { data: producten } = await supabase.from('producten').select('*');
-      const tbody = document.querySelector('#voorraadTabel tbody');
-      tbody.innerHTML = '';
-      producten.forEach(p => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${p.naam}</td>
-          <td><input type="number" value="${p.aantal}" onchange="wijzigVoorraad('${p.id}', this.value)"></td>
-          <td><button class="verwijder" onclick="verwijderProduct('${p.id}')">Verwijder</button></td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    async function wijzigVoorraad(id, waarde) {
-      await supabase.from('producten').update({ aantal: parseInt(waarde) }).eq('id', id);
-    }
-
-    async function verwijderProduct(id) {
-      await supabase.from('producten').delete().eq('id', id);
-      laadVoorraad();
-    }
-
-    async function laadLogs() {
-      const { data: logs } = await supabase.from('logs').select('*').order('tijd', { ascending: false });
-      const tbody = document.querySelector('#logsTabel tbody');
-      tbody.innerHTML = '';
+    async function toonBeheerscherm() {
+      document.querySelectorAll('.container').forEach(el => el.classList.remove('active'));
+      document.getElementById('beheerscherm').classList.add('active');
+      const { data: logs } = await supabaseClient.from('logs').select().order('datum', { ascending: false });
+      const tabel = document.getElementById('logTabel');
+      tabel.innerHTML = '';
       logs.forEach(log => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${gebruikers[log.gebruiker_code] || 'Onbekend'}</td><td>${log.product_naam}</td><td>${new Date(log.tijd).toLocaleString()}</td>`;
-        tbody.appendChild(tr);
+        const rij = document.createElement('tr');
+        rij.innerHTML = `<td>${log.naam}</td><td>${log.gebruiker}</td><td>${new Date(log.datum).toLocaleString()}</td>`;
+        tabel.appendChild(rij);
       });
     }
-
-    async function laadGebruikersTabel() {
-      const { data } = await supabase.from('gebruikers').select('*');
-      const tbody = document.getElementById('gebruikersTabel');
-      tbody.innerHTML = '';
-      data.forEach(g => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${g.code}</td><td>${g.naam}</td>`;
-        tbody.appendChild(tr);
-      });
-    }
-
-    window.onload = laadGebruikers;
   </script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-    .container { display: none; padding: 20px; }
-    .container.active { display: block; }
-    .product-tile { border: 1px solid #ccc; padding: 10px; margin: 10px; display: inline-block; width: 150px; text-align: center; }
-    #codeOverlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; }
-    #codeOverlay.active { display: flex; }
-    #codeOverlay div { background: white; padding: 20px; border-radius: 8px; }
-    table { width: 100%; border-collapse: collapse; }
-    td, th { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    .verwijder { color: red; }
-  </style>
-</head>
-<body>
-  <div id="startscherm" class="container active">
-    <h1>Welkom bij de Koelkast</h1>
-    <button onclick="toonCodePopup('bestellen')">Bestellen</button>
-    <button onclick="toonCodePopup('beheer')">Beheer</button>
-  </div>
-
-  <div id="bestelscherm" class="container">
-    <h2>Bestellen</h2>
-    <div id="productContainer"></div>
-    <p id="bestelMelding"></p>
-    <button onclick="wisselScherm('startscherm')">Terug</button>
-  </div>
-
-  <div id="beheerscherm" class="container">
-    <h2>Voorraadbeheer</h2>
-    <table id="voorraadTabel">
-      <thead><tr><th>Product</th><th>Aantal</th><th>Acties</th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <h2>Bestelgeschiedenis</h2>
-    <table id="logsTabel">
-      <thead><tr><th>Naam</th><th>Product</th><th>Tijd</th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <h2>Gebruikers</h2>
-    <table>
-      <thead><tr><th>Code</th><th>Naam</th></tr></thead>
-      <tbody id="gebruikersTabel"></tbody>
-    </table>
-    <button onclick="wisselScherm('startscherm')">Uitloggen</button>
-  </div>
-
-  <div id="codeOverlay">
-    <div>
-      <h3>Voer je code in</h3>
-      <input id="codeInput" type="text" placeholder="Gebruikers- of beheercode">
-      <button onclick="verifieerCode()">OK</button>
-    </div>
-  </div>
 </body>
 </html>
