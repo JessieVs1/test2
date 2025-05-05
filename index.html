@@ -33,28 +33,35 @@
   </div>
 
   <script>
-    // 🔗 Supabase setup
+    // Supabase setup
     const supabaseUrl = 'https://nsevcinmxmaplnpyctht.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU';
     const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // 🔐 Codes
     const ADMIN_CODE = 'Admin123';
     let currentUser = null;
     let cart = [];
 
-    // Popup controls
     let popupCallback = null;
+
     function openAdminPopup() {
-      showPopup("Voer admincode in", code => {
-        if (code === ADMIN_CODE) loadAdminScreen();
-        else alert("Ongeldige admincode");
+      showPopup("Voer admincode in", async (code) => {
+        if (code === ADMIN_CODE) {
+          loadAdminScreen();
+        } else {
+          alert("Ongeldige admincode");
+        }
       });
     }
 
     function openOrderPopup() {
-      showPopup("Voer gebruikerscode in", async code => {
-        const { data: user } = await supabase.from('users').select('*').eq('code', code).single();
+      showPopup("Voer gebruikerscode in", async (code) => {
+        const { data: user, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('code', code)
+          .single();
+
         if (user) {
           currentUser = user;
           loadOrderScreen();
@@ -75,13 +82,12 @@
       document.getElementById('popup').classList.add('hidden');
     }
 
-    function confirmPopup() {
+    async function confirmPopup() {
       const value = document.getElementById('popup-input').value;
       closePopup();
-      if (popupCallback) popupCallback(value);
+      if (popupCallback) await popupCallback(value);
     }
 
-    // 🔁 Navigatie
     function showScreen(id) {
       document.getElementById('start-screen').classList.add('hidden');
       document.getElementById('order-screen').classList.add('hidden');
@@ -95,7 +101,6 @@
       cart = [];
     }
 
-    // 🛒 Bestellen
     async function loadOrderScreen() {
       showScreen('order-screen');
       const screen = document.getElementById('order-screen');
@@ -152,7 +157,13 @@
         alert("Winkelwagen is leeg!");
         return;
       }
-      const { data: order } = await supabase.from('orders').insert({ user_id: currentUser.id }).select().single();
+
+      const { data: order } = await supabase
+        .from('orders')
+        .insert({ user_id: currentUser.id })
+        .select()
+        .single();
+
       for (let item of cart) {
         await supabase.from('order_items').insert({
           order_id: order.id,
@@ -160,15 +171,16 @@
           quantity: item.quantity,
           price: item.price
         });
+
         await supabase.rpc('decrement_stock', { pid: item.id, qty: item.quantity });
       }
+
       alert("Bestelling geplaatst!");
       cart = [];
       updateCartUI();
       loadOrderScreen();
     }
 
-    // 👑 Admin
     async function loadAdminScreen() {
       showScreen('admin-screen');
       const screen = document.getElementById('admin-screen');
