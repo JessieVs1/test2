@@ -1,254 +1,227 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Bestel App</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 font-sans p-4">
-  <div id="app" class="max-w-4xl mx-auto">
-    <!-- Startscherm -->
-    <div id="start-screen" class="text-center">
-      <h1 class="text-3xl font-bold mb-8">Welkom bij de Bestel App</h1>
-      <button onclick="openOrderPopup()" class="bg-blue-500 text-white px-6 py-2 rounded mr-4">Bestellen</button>
-      <button onclick="openAdminPopup()" class="bg-gray-700 text-white px-6 py-2 rounded">Beheer</button>
-    </div>
-
-    <!-- Overige schermen -->
-    <div id="order-screen" class="hidden"></div>
-    <div id="admin-screen" class="hidden"></div>
-  </div>
-
-  <!-- Pop-ups -->
-  <div id="popup" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
-    <div class="bg-white p-6 rounded shadow-md w-80 text-center">
-      <h2 class="text-xl font-semibold mb-4" id="popup-title">Code invoeren</h2>
-      <input id="popup-input" type="text" placeholder="Code" class="w-full border px-2 py-1 mb-4 rounded" />
-      <div>
-        <button onclick="confirmPopup()" class="bg-blue-600 text-white px-4 py-1 rounded mr-2">OK</button>
-        <button onclick="closePopup()" class="bg-gray-400 text-white px-4 py-1 rounded">Annuleer</button>
-      </div>
-    </div>
-  </div>
+<body class="bg-gray-100 text-gray-800 font-sans">
+  <div id="app" class="min-h-screen flex flex-col items-center justify-center p-6"></div>
 
   <script>
-    // Supabase setup
-    const supabaseUrl = 'https://nsevcinmxmaplnpyctht.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU';
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    // Supabase init
+    const SUPABASE_URL = "https://nsevcinmxmaplnpyctht.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU";
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const ADMIN_CODE = 'Admin123';
+    const app = document.getElementById("app");
+
     let currentUser = null;
     let cart = [];
 
-    let popupCallback = null;
+    const clearApp = () => (app.innerHTML = "");
 
-    function openAdminPopup() {
-      showPopup("Voer admincode in", async (code) => {
-        if (code === ADMIN_CODE) {
-          loadAdminScreen();
-        } else {
-          alert("Ongeldige admincode");
-        }
-      });
+    function showAlert(msg) {
+      alert(msg);
     }
 
-    function openOrderPopup() {
-      showPopup("Voer gebruikerscode in", async (code) => {
-        const { data: user, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('code', code)
-          .single();
+    function startScreen() {
+      clearApp();
+      app.innerHTML = `
+        <h1 class="text-3xl font-bold mb-6">Welkom bij de Bestel App</h1>
+        <div class="space-x-4">
+          <button id="orderBtn" class="px-4 py-2 bg-blue-500 text-white rounded">Bestellen</button>
+          <button id="adminBtn" class="px-4 py-2 bg-gray-700 text-white rounded">Beheer</button>
+        </div>
+      `;
+      document.getElementById("adminBtn").onclick = () => {
+        const code = prompt("Voer de admin code in:");
+        if (code === "Admin123") {
+          adminScreen();
+        } else {
+          showAlert("Ongeldige code.");
+        }
+      };
 
+      document.getElementById("orderBtn").onclick = async () => {
+        const code = prompt("Voer jouw gebruikerscode in:");
+        let { data: user } = await supabase.from("users").select("*").eq("code", code).single();
         if (user) {
           currentUser = user;
-          loadOrderScreen();
+          orderScreen();
         } else {
-          alert("Gebruiker niet gevonden");
+          showAlert("Gebruiker niet gevonden.");
         }
-      });
+      };
     }
 
-    function showPopup(title, callback) {
-      document.getElementById('popup-title').innerText = title;
-      document.getElementById('popup-input').value = '';
-      document.getElementById('popup').classList.remove('hidden');
-      popupCallback = callback;
-    }
+    async function orderScreen() {
+      clearApp();
+      let { data: products } = await supabase.from("products").select("*");
 
-    function closePopup() {
-      document.getElementById('popup').classList.add('hidden');
-    }
-
-    async function confirmPopup() {
-      const value = document.getElementById('popup-input').value;
-      closePopup();
-      if (popupCallback) await popupCallback(value);
-    }
-
-    function showScreen(id) {
-      document.getElementById('start-screen').classList.add('hidden');
-      document.getElementById('order-screen').classList.add('hidden');
-      document.getElementById('admin-screen').classList.add('hidden');
-      document.getElementById(id).classList.remove('hidden');
-    }
-
-    function backToStart() {
-      showScreen('start-screen');
-      currentUser = null;
-      cart = [];
-    }
-
-    async function loadOrderScreen() {
-      showScreen('order-screen');
-      const screen = document.getElementById('order-screen');
-      screen.innerHTML = `
-        <h2 class="text-2xl font-bold mb-4">Welkom, ${currentUser.name}</h2>
-        <div id="product-grid" class="grid grid-cols-2 gap-4"></div>
-        <h3 class="text-xl font-semibold mt-6 mb-2">Winkelwagen</h3>
-        <ul id="cart-list" class="bg-white p-4 rounded shadow mb-4"></ul>
-        <button onclick="submitOrder()" class="bg-green-600 text-white px-4 py-2 rounded">Bestelling bevestigen</button>
-        <button onclick="backToStart()" class="mt-4 bg-gray-400 text-white px-4 py-1 rounded">Terug</button>
+      app.innerHTML = `
+        <div class="flex justify-between items-center w-full mb-4">
+          <h2 class="text-2xl font-semibold">Welkom ${currentUser.name}</h2>
+          <button class="bg-red-500 text-white px-3 py-1 rounded" onclick="startScreen()">Terug</button>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
+          ${products
+            .map(
+              (p) => `
+            <div class="bg-white p-4 rounded shadow">
+              <h3 class="font-bold">${p.name}</h3>
+              <p>Prijs: €${p.price.toFixed(2)}</p>
+              <p>Voorraad: ${p.stock}</p>
+              <button class="mt-2 bg-green-500 text-white px-2 py-1 rounded" onclick="addToCart(${p.id})">Bestel</button>
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+        <div class="mt-6">
+          <button class="bg-yellow-500 px-4 py-2 text-white rounded" onclick="reviewCart()">Winkelwagen (${cart.length})</button>
+        </div>
       `;
-      const { data: products } = await supabase.from('products').select('*');
-      const grid = document.getElementById('product-grid');
-      products.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'bg-white p-4 rounded shadow';
-        card.innerHTML = `
-          <h3 class="text-lg font-semibold">${p.name}</h3>
-          <p>Prijs: €${p.price.toFixed(2)}</p>
-          <p>Voorraad: ${p.stock}</p>
-          <button onclick='addToCart("${p.id}", "${p.name}", ${p.price}, ${p.stock})' class="mt-2 bg-blue-500 text-white px-3 py-1 rounded">Toevoegen</button>
-        `;
-        grid.appendChild(card);
-      });
     }
 
-    function addToCart(id, name, price, stock) {
-      const existing = cart.find(p => p.id === id);
-      if (existing) {
-        if (existing.quantity + 1 > stock) {
-          alert("Niet genoeg voorraad!");
+    async function addToCart(productId) {
+      let { data: product } = await supabase.from("products").select("*").eq("id", productId).single();
+      if (!product || product.stock <= 0) return showAlert("Product niet op voorraad!");
+
+      cart.push(product);
+      showAlert(`${product.name} toegevoegd aan winkelwagen.`);
+    }
+
+    function reviewCart() {
+      clearApp();
+      if (cart.length === 0) {
+        showAlert("Winkelwagen is leeg!");
+        return orderScreen();
+      }
+
+      let grouped = {};
+      cart.forEach((item) => {
+        if (!grouped[item.id]) grouped[item.id] = { ...item, quantity: 0 };
+        grouped[item.id].quantity++;
+      });
+
+      let total = Object.values(grouped).reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+      app.innerHTML = `
+        <h2 class="text-2xl font-bold mb-4">Winkelwagen</h2>
+        <ul class="mb-4">
+          ${Object.values(grouped)
+            .map(
+              (item) => `<li>${item.name} - ${item.quantity} x €${item.price.toFixed(2)}</li>`
+            )
+            .join("")}
+        </ul>
+        <p class="mb-4 font-bold">Totaal: €${total.toFixed(2)}</p>
+        <button onclick="confirmOrder()" class="bg-green-600 text-white px-4 py-2 rounded mr-2">Bevestigen</button>
+        <button onclick="orderScreen()" class="bg-gray-500 text-white px-4 py-2 rounded">Terug</button>
+      `;
+    }
+
+    async function confirmOrder() {
+      const updates = {};
+      for (let item of cart) {
+        updates[item.id] = (updates[item.id] || 0) + 1;
+      }
+
+      for (let [id, qty] of Object.entries(updates)) {
+        let { data: product } = await supabase.from("products").select("*").eq("id", id).single();
+        if (product.stock < qty) {
+          showAlert(`Te weinig voorraad voor ${product.name}.`);
           return;
         }
-        existing.quantity++;
-      } else {
-        cart.push({ id, name, price, quantity: 1 });
       }
-      updateCartUI();
-      alert(`${name} toegevoegd aan winkelwagen`);
-    }
 
-    function updateCartUI() {
-      const list = document.getElementById('cart-list');
-      list.innerHTML = '';
-      cart.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = `${item.name} x${item.quantity} = €${(item.quantity * item.price).toFixed(2)}`;
-        list.appendChild(li);
+      for (let [id, qty] of Object.entries(updates)) {
+        await supabase
+          .from("products")
+          .update({ stock: supabase.rpc('decrement_stock', { pid: id, amount: qty }) })
+          .eq("id", id);
+      }
+
+      await supabase.from("orders").insert({
+        user_id: currentUser.id,
+        items: cart.map((p) => p.name).join(", "),
+        total: cart.reduce((sum, p) => sum + p.price, 0),
       });
-    }
 
-    async function submitOrder() {
-      if (cart.length === 0) {
-        alert("Winkelwagen is leeg!");
-        return;
-      }
-
-      const { data: order } = await supabase
-        .from('orders')
-        .insert({ user_id: currentUser.id })
-        .select()
-        .single();
-
-      for (let item of cart) {
-        await supabase.from('order_items').insert({
-          order_id: order.id,
-          product_id: item.id,
-          quantity: item.quantity,
-          price: item.price
-        });
-
-        await supabase.rpc('decrement_stock', { pid: item.id, qty: item.quantity });
-      }
-
-      alert("Bestelling geplaatst!");
       cart = [];
-      updateCartUI();
-      loadOrderScreen();
+      showAlert("Bestelling geplaatst!");
+      orderScreen();
     }
 
-    async function loadAdminScreen() {
-      showScreen('admin-screen');
-      const screen = document.getElementById('admin-screen');
-      screen.innerHTML = `
+    async function adminScreen() {
+      clearApp();
+      app.innerHTML = `
         <h2 class="text-2xl font-bold mb-4">Beheer</h2>
-        <button onclick="showUsers()" class="bg-blue-600 text-white px-4 py-2 rounded mb-2">Gebruikers beheren</button><br>
-        <button onclick="showProducts()" class="bg-blue-600 text-white px-4 py-2 rounded mb-2">Voorraad beheren</button><br>
-        <button onclick="showOrders()" class="bg-blue-600 text-white px-4 py-2 rounded mb-2">Bestelgeschiedenis</button><br>
-        <button onclick="addProductForm()" class="bg-green-600 text-white px-4 py-2 rounded mb-2">Nieuw product toevoegen</button><br>
-        <button onclick="backToStart()" class="mt-4 bg-gray-400 text-white px-4 py-1 rounded">Terug</button>
-        <div id="admin-content" class="mt-6"></div>
+        <div class="space-y-2">
+          <button onclick="showUsers()" class="w-full bg-blue-600 text-white py-2 rounded">Gebruikers beheren</button>
+          <button onclick="showProducts()" class="w-full bg-green-600 text-white py-2 rounded">Voorraad beheren</button>
+          <button onclick="showOrders()" class="w-full bg-yellow-600 text-white py-2 rounded">Bestelgeschiedenis</button>
+          <button onclick="addProduct()" class="w-full bg-purple-600 text-white py-2 rounded">Product toevoegen</button>
+          <button onclick="startScreen()" class="w-full bg-gray-600 text-white py-2 rounded">Terug</button>
+        </div>
       `;
-    }
-
-    async function showUsers() {
-      const { data: users } = await supabase.from('users').select('*');
-      const div = document.getElementById('admin-content');
-      div.innerHTML = '<h3 class="text-xl font-semibold mb-2">Gebruikers</h3>';
-      users.forEach(u => {
-        div.innerHTML += `<p>${u.name} (${u.code})</p>`;
-      });
-    }
-
-    async function showProducts() {
-      const { data: products } = await supabase.from('products').select('*');
-      const div = document.getElementById('admin-content');
-      div.innerHTML = '<h3 class="text-xl font-semibold mb-2">Voorraad</h3>';
-      products.forEach(p => {
-        div.innerHTML += `<p>${p.name} - voorraad: ${p.stock}</p>`;
-      });
     }
 
     async function showOrders() {
-      const { data: orders } = await supabase
-        .from('orders')
-        .select('id, created_at, user_id, users(name), order_items(quantity, price, product_id, products(name))');
-
-      const div = document.getElementById('admin-content');
-      div.innerHTML = '<h3 class="text-xl font-semibold mb-2">Bestelgeschiedenis</h3>';
-      orders.forEach(o => {
-        const totaal = o.order_items.reduce((t, i) => t + i.quantity * i.price, 0);
-        div.innerHTML += `<p><strong>${o.users.name}</strong> - €${totaal.toFixed(2)}</p>`;
-      });
-    }
-
-    function addProductForm() {
-      const div = document.getElementById('admin-content');
-      div.innerHTML = `
-        <h3 class="text-xl font-semibold mb-2">Nieuw product</h3>
-        <input id="new-name" placeholder="Naam" class="border px-2 py-1 mb-2 block w-full" />
-        <input id="new-price" type="number" placeholder="Prijs" class="border px-2 py-1 mb-2 block w-full" />
-        <input id="new-stock" type="number" placeholder="Voorraad" class="border px-2 py-1 mb-2 block w-full" />
-        <button onclick="saveProduct()" class="bg-green-600 text-white px-4 py-2 rounded">Opslaan</button>
+      clearApp();
+      const { data } = await supabase.from("orders").select("*, users(name)").order("user_id");
+      app.innerHTML = `
+        <h2 class="text-2xl font-bold mb-4">Bestelgeschiedenis</h2>
+        <ul class="mb-4">
+          ${data
+            .map(
+              (o) =>
+                `<li><strong>${o.users.name}:</strong> ${o.items} (€${o.total.toFixed(2)})</li>`
+            )
+            .join("")}
+        </ul>
+        <button onclick="clearLogs()" class="bg-red-600 text-white px-4 py-2 rounded">Logs wissen</button>
+        <button onclick="adminScreen()" class="ml-2 bg-gray-500 text-white px-4 py-2 rounded">Terug</button>
       `;
     }
 
-    async function saveProduct() {
-      const name = document.getElementById('new-name').value;
-      const price = parseFloat(document.getElementById('new-price').value);
-      const stock = parseInt(document.getElementById('new-stock').value);
-      if (!name || isNaN(price) || isNaN(stock)) {
-        alert("Ongeldige invoer");
-        return;
+    function clearLogs() {
+      if (confirm("Weet je zeker dat je de logs wilt wissen?")) {
+        supabase.from("orders").delete().neq("id", 0);
+        showAlert("Logs verwijderd.");
+        adminScreen();
       }
-      await supabase.from('products').insert({ name, price, stock });
-      alert("Product toegevoegd!");
-      showProducts();
     }
+
+    function showUsers() {
+      // Implementatie gebruikerbeheer (toevoegen, wijzigen, verwijderen) kan hier verder worden uitgebreid
+      showAlert("Gebruikerbeheer UI hier verder uitbreiden.");
+      adminScreen();
+    }
+
+    function showProducts() {
+      // Implementatie voorraadbeheer
+      showAlert("Voorraadbeheer UI hier verder uitbreiden.");
+      adminScreen();
+    }
+
+    function addProduct() {
+      const name = prompt("Naam van product:");
+      const price = parseFloat(prompt("Prijs:"));
+      const stock = parseInt(prompt("Voorraad:"), 10);
+      if (name && !isNaN(price) && !isNaN(stock)) {
+        supabase.from("products").insert({ name, price, stock });
+        showAlert("Product toegevoegd.");
+        adminScreen();
+      } else {
+        showAlert("Ongeldige invoer.");
+      }
+    }
+
+    startScreen();
   </script>
 </body>
 </html>
