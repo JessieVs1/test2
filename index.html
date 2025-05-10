@@ -108,8 +108,14 @@
     let doelPagina = '';
 
     function toonPagina(paginaId) {
+      console.log("Toon pagina:", paginaId);
       document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-      document.getElementById(paginaId).classList.remove('hidden');
+      const pagina = document.getElementById(paginaId);
+      if (pagina) {
+        pagina.classList.remove('hidden');
+      } else {
+        console.error(`Pagina met ID '${paginaId}' niet gevonden.`);
+      }
     }
 
     function verbergBeheerSecties() {
@@ -160,6 +166,7 @@
       if (!code) return alert('Voer een geldige gebruikerscode in.');
       huidigeGebruiker = code;
       verbergLoginPopup();
+      console.log("Ingelogd als:", code);
       if (doelPagina === 'bestelscherm') {
         toonPagina('bestelscherm');
         document.getElementById('gebruikersNaam').textContent = `Gebruiker: ${huidigeGebruiker}`;
