@@ -1,227 +1,202 @@
+<!-- START: Volledige Bestel & Beheer App in één HTML bestand -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Bestel App</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bestel & Beheer App</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.35.6/dist/umd/supabase.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f3f4f6;
+    }
+    .hidden { display: none; }
+    .page { display: none; }
+    .active { display: block; }
+    input, select, button, textarea {
+      margin-top: 0.5rem;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans">
-  <div id="app" class="min-h-screen flex flex-col items-center justify-center p-6"></div>
+<body class="min-h-screen flex flex-col justify-center items-center p-6">
+  <!-- Startscherm -->
+  <div id="startscherm" class="page active text-center space-y-6">
+    <h1 class="text-4xl font-extrabold text-gray-800">Welkom bij de Bestel App</h1>
+    <div class="space-x-4">
+      <button id="bestelBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl shadow">Bestellen</button>
+      <button id="beheerBtn" class="bg-gray-700 hover:bg-gray-800 text-white font-semibold px-6 py-3 rounded-xl shadow">Beheer</button>
+    </div>
+  </div>
+
+  <!-- Bestelscherm -->
+  <div id="bestelscherm" class="page hidden w-full max-w-3xl">
+    <h2 class="text-2xl font-bold mb-4">Plaats een Bestelling</h2>
+    <p id="gebruikersNaam" class="text-lg text-gray-600 mb-4"></p>
+    <div id="productenLijst" class="space-y-4"></div>
+    <button onclick="plaatsBestelling()" class="mt-6 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Bestellen</button>
+    <button onclick="toonPagina('startscherm')" class="mt-2 bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500">Terug</button>
+  </div>
+
+  <!-- Beheerpagina -->
+  <div id="beheerscherm" class="page hidden space-y-4 w-full max-w-4xl">
+    <h2 class="text-3xl font-bold text-gray-700 text-center">Beheer</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <button onclick="toonVoorraadBeheer()" class="bg-indigo-600 text-white px-5 py-3 rounded-xl shadow hover:bg-indigo-700">Voorraad Beheer</button>
+      <button onclick="toonProductToevoegen()" class="bg-green-600 text-white px-5 py-3 rounded-xl shadow hover:bg-green-700">Product Toevoegen</button>
+      <button onclick="toonBestelGeschiedenis()" class="bg-yellow-500 text-white px-5 py-3 rounded-xl shadow hover:bg-yellow-600">Bestelgeschiedenis</button>
+    </div>
+    <button onclick="toonPagina('startscherm')" class="mt-6 bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500">Terug</button>
+
+    <!-- Voorraadbeheer -->
+    <div id="voorraadBeheerSectie" class="hidden mt-6 bg-white p-6 rounded-xl shadow">
+      <h3 class="text-xl font-semibold mb-4">Voorraad Beheer</h3>
+      <div id="voorraadLijst" class="space-y-2">
+        <p class="text-gray-500">Laden...</p>
+      </div>
+    </div>
+
+    <!-- Product toevoegen -->
+    <div id="productToevoegenSectie" class="hidden mt-6 bg-white p-6 rounded-xl shadow">
+      <h3 class="text-xl font-semibold mb-4">Nieuw Product Toevoegen</h3>
+      <form id="productForm" class="space-y-4">
+        <input type="text" id="productNaam" placeholder="Productnaam" class="w-full border px-3 py-2 rounded">
+        <input type="number" id="productPrijs" placeholder="Prijs" step="0.01" class="w-full border px-3 py-2 rounded">
+        <input type="number" id="productVoorraad" placeholder="Voorraad" class="w-full border px-3 py-2 rounded">
+        <button type="button" onclick="voegProductToe()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Toevoegen</button>
+      </form>
+    </div>
+
+    <!-- Bestelgeschiedenis -->
+    <div id="bestelGeschiedenisSectie" class="hidden mt-6 bg-white p-6 rounded-xl shadow">
+      <h3 class="text-xl font-semibold mb-4">Bestelgeschiedenis</h3>
+      <div id="geschiedenisLijst" class="space-y-2 text-sm text-gray-700">Laden...</div>
+    </div>
+  </div>
 
   <script>
-    // Supabase init
-    const SUPABASE_URL = "https://nsevcinmxmaplnpyctht.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU";
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    let huidigeGebruiker = null;
+    let supabaseClient = null;
 
-    const app = document.getElementById("app");
-
-    let currentUser = null;
-    let cart = [];
-
-    const clearApp = () => (app.innerHTML = "");
-
-    function showAlert(msg) {
-      alert(msg);
+    function toonPagina(paginaId) {
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      document.getElementById(paginaId).classList.remove('hidden');
     }
 
-    function startScreen() {
-      clearApp();
-      app.innerHTML = `
-        <h1 class="text-3xl font-bold mb-6">Welkom bij de Bestel App</h1>
-        <div class="space-x-4">
-          <button id="orderBtn" class="px-4 py-2 bg-blue-500 text-white rounded">Bestellen</button>
-          <button id="adminBtn" class="px-4 py-2 bg-gray-700 text-white rounded">Beheer</button>
-        </div>
-      `;
-      document.getElementById("adminBtn").onclick = () => {
-        const code = prompt("Voer de admin code in:");
+    function verbergBeheerSecties() {
+      document.getElementById('voorraadBeheerSectie').classList.add('hidden');
+      document.getElementById('productToevoegenSectie').classList.add('hidden');
+      document.getElementById('bestelGeschiedenisSectie').classList.add('hidden');
+    }
+
+    async function toonVoorraadBeheer() {
+      verbergBeheerSecties();
+      document.getElementById('voorraadBeheerSectie').classList.remove('hidden');
+      const lijst = document.getElementById('voorraadLijst');
+      lijst.innerHTML = 'Laden...';
+      const { data, error } = await supabaseClient.from('producten').select('*');
+      if (error) return lijst.innerHTML = 'Fout bij laden';
+      lijst.innerHTML = '';
+      data.forEach(product => {
+        const div = document.createElement('div');
+        div.textContent = `${product.naam}: voorraad ${product.voorraad}`;
+        lijst.appendChild(div);
+      });
+    }
+
+    function toonProductToevoegen() {
+      verbergBeheerSecties();
+      document.getElementById('productToevoegenSectie').classList.remove('hidden');
+    }
+
+    async function voegProductToe() {
+      const naam = document.getElementById('productNaam').value;
+      const prijs = parseFloat(document.getElementById('productPrijs').value);
+      const voorraad = parseInt(document.getElementById('productVoorraad').value);
+      if (!naam || isNaN(prijs) || isNaN(voorraad)) return alert('Vul alles correct in.');
+      await supabaseClient.from('producten').insert([{ naam, prijs, voorraad }]);
+      alert('Product toegevoegd!');
+    }
+
+    async function toonBestelGeschiedenis() {
+      verbergBeheerSecties();
+      document.getElementById('bestelGeschiedenisSectie').classList.remove('hidden');
+      const lijst = document.getElementById('geschiedenisLijst');
+      lijst.innerHTML = 'Laden...';
+      const { data, error } = await supabaseClient.from('bestellingen').select('*');
+      if (error) return lijst.innerHTML = 'Fout bij laden';
+      lijst.innerHTML = '';
+      data.forEach(bestelling => {
+        const item = document.createElement('div');
+        item.textContent = `Product ID: ${bestelling.product_id}, Aantal: ${bestelling.aantal}`;
+        lijst.appendChild(item);
+      });
+    }
+
+    async function laadProducten() {
+      const lijst = document.getElementById('productenLijst');
+      lijst.innerHTML = '<p>Laden...</p>';
+      const { data, error } = await supabaseClient.from('producten').select('*');
+      if (error) return lijst.innerHTML = '<p>Fout bij laden van producten.</p>';
+      lijst.innerHTML = '';
+      data.forEach(product => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center justify-between border p-4 rounded-lg shadow';
+        div.innerHTML = `
+          <div>
+            <h4 class="font-semibold">${product.naam}</h4>
+            <p class="text-gray-600">Prijs: €${product.prijs.toFixed(2)} | Voorraad: ${product.voorraad}</p>
+          </div>
+          <input type="number" min="0" max="${product.voorraad}" id="product-${product.id}" class="w-20 border rounded px-2 py-1" placeholder="0">
+        `;
+        lijst.appendChild(div);
+      });
+    }
+
+    async function plaatsBestelling() {
+      const inputs = document.querySelectorAll('#productenLijst input');
+      for (const input of inputs) {
+        const aantal = parseInt(input.value);
+        if (!aantal || aantal <= 0) continue;
+        const productId = input.id.split('-')[1];
+        await supabaseClient.from('bestellingen').insert([{ product_id: productId, aantal, gebruiker: huidigeGebruiker }]);
+      }
+      alert("Bestelling geplaatst!");
+      toonPagina('startscherm');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const { createClient } = supabase;
+      supabaseClient = createClient(
+        'https://nsevcinmxmaplnpyctht.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU'
+      );
+
+      document.getElementById('bestelBtn').addEventListener('click', async () => {
+        const code = prompt("Voer je gebruikerscode in:");
+        if (!code) return alert("Geen code ingevoerd.");
+        const { data, error } = await supabaseClient.from('gebruikers').select('*').eq('code', code).single();
+        if (error || !data) return alert("Code niet gevonden. Toegang geweigerd.");
+        huidigeGebruiker = data.naam;
+        document.getElementById('gebruikersNaam').innerText = `Welkom, ${data.naam}`;
+        toonPagina('bestelscherm');
+        laadProducten();
+      });
+
+      document.getElementById('beheerBtn').addEventListener('click', () => {
+        const code = prompt("Voer de admincode in:");
         if (code === "Admin123") {
-          adminScreen();
+          toonPagina('beheerscherm');
+          verbergBeheerSecties();
         } else {
-          showAlert("Ongeldige code.");
+          alert("Ongeldige admincode.");
         }
-      };
-
-      document.getElementById("orderBtn").onclick = async () => {
-        const code = prompt("Voer jouw gebruikerscode in:");
-        let { data: user } = await supabase.from("users").select("*").eq("code", code).single();
-        if (user) {
-          currentUser = user;
-          orderScreen();
-        } else {
-          showAlert("Gebruiker niet gevonden.");
-        }
-      };
-    }
-
-    async function orderScreen() {
-      clearApp();
-      let { data: products } = await supabase.from("products").select("*");
-
-      app.innerHTML = `
-        <div class="flex justify-between items-center w-full mb-4">
-          <h2 class="text-2xl font-semibold">Welkom ${currentUser.name}</h2>
-          <button class="bg-red-500 text-white px-3 py-1 rounded" onclick="startScreen()">Terug</button>
-        </div>
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
-          ${products
-            .map(
-              (p) => `
-            <div class="bg-white p-4 rounded shadow">
-              <h3 class="font-bold">${p.name}</h3>
-              <p>Prijs: €${p.price.toFixed(2)}</p>
-              <p>Voorraad: ${p.stock}</p>
-              <button class="mt-2 bg-green-500 text-white px-2 py-1 rounded" onclick="addToCart(${p.id})">Bestel</button>
-            </div>
-          `
-            )
-            .join("")}
-        </div>
-        <div class="mt-6">
-          <button class="bg-yellow-500 px-4 py-2 text-white rounded" onclick="reviewCart()">Winkelwagen (${cart.length})</button>
-        </div>
-      `;
-    }
-
-    async function addToCart(productId) {
-      let { data: product } = await supabase.from("products").select("*").eq("id", productId).single();
-      if (!product || product.stock <= 0) return showAlert("Product niet op voorraad!");
-
-      cart.push(product);
-      showAlert(`${product.name} toegevoegd aan winkelwagen.`);
-    }
-
-    function reviewCart() {
-      clearApp();
-      if (cart.length === 0) {
-        showAlert("Winkelwagen is leeg!");
-        return orderScreen();
-      }
-
-      let grouped = {};
-      cart.forEach((item) => {
-        if (!grouped[item.id]) grouped[item.id] = { ...item, quantity: 0 };
-        grouped[item.id].quantity++;
       });
-
-      let total = Object.values(grouped).reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-      app.innerHTML = `
-        <h2 class="text-2xl font-bold mb-4">Winkelwagen</h2>
-        <ul class="mb-4">
-          ${Object.values(grouped)
-            .map(
-              (item) => `<li>${item.name} - ${item.quantity} x €${item.price.toFixed(2)}</li>`
-            )
-            .join("")}
-        </ul>
-        <p class="mb-4 font-bold">Totaal: €${total.toFixed(2)}</p>
-        <button onclick="confirmOrder()" class="bg-green-600 text-white px-4 py-2 rounded mr-2">Bevestigen</button>
-        <button onclick="orderScreen()" class="bg-gray-500 text-white px-4 py-2 rounded">Terug</button>
-      `;
-    }
-
-    async function confirmOrder() {
-      const updates = {};
-      for (let item of cart) {
-        updates[item.id] = (updates[item.id] || 0) + 1;
-      }
-
-      for (let [id, qty] of Object.entries(updates)) {
-        let { data: product } = await supabase.from("products").select("*").eq("id", id).single();
-        if (product.stock < qty) {
-          showAlert(`Te weinig voorraad voor ${product.name}.`);
-          return;
-        }
-      }
-
-      for (let [id, qty] of Object.entries(updates)) {
-        await supabase
-          .from("products")
-          .update({ stock: supabase.rpc('decrement_stock', { pid: id, amount: qty }) })
-          .eq("id", id);
-      }
-
-      await supabase.from("orders").insert({
-        user_id: currentUser.id,
-        items: cart.map((p) => p.name).join(", "),
-        total: cart.reduce((sum, p) => sum + p.price, 0),
-      });
-
-      cart = [];
-      showAlert("Bestelling geplaatst!");
-      orderScreen();
-    }
-
-    async function adminScreen() {
-      clearApp();
-      app.innerHTML = `
-        <h2 class="text-2xl font-bold mb-4">Beheer</h2>
-        <div class="space-y-2">
-          <button onclick="showUsers()" class="w-full bg-blue-600 text-white py-2 rounded">Gebruikers beheren</button>
-          <button onclick="showProducts()" class="w-full bg-green-600 text-white py-2 rounded">Voorraad beheren</button>
-          <button onclick="showOrders()" class="w-full bg-yellow-600 text-white py-2 rounded">Bestelgeschiedenis</button>
-          <button onclick="addProduct()" class="w-full bg-purple-600 text-white py-2 rounded">Product toevoegen</button>
-          <button onclick="startScreen()" class="w-full bg-gray-600 text-white py-2 rounded">Terug</button>
-        </div>
-      `;
-    }
-
-    async function showOrders() {
-      clearApp();
-      const { data } = await supabase.from("orders").select("*, users(name)").order("user_id");
-      app.innerHTML = `
-        <h2 class="text-2xl font-bold mb-4">Bestelgeschiedenis</h2>
-        <ul class="mb-4">
-          ${data
-            .map(
-              (o) =>
-                `<li><strong>${o.users.name}:</strong> ${o.items} (€${o.total.toFixed(2)})</li>`
-            )
-            .join("")}
-        </ul>
-        <button onclick="clearLogs()" class="bg-red-600 text-white px-4 py-2 rounded">Logs wissen</button>
-        <button onclick="adminScreen()" class="ml-2 bg-gray-500 text-white px-4 py-2 rounded">Terug</button>
-      `;
-    }
-
-    function clearLogs() {
-      if (confirm("Weet je zeker dat je de logs wilt wissen?")) {
-        supabase.from("orders").delete().neq("id", 0);
-        showAlert("Logs verwijderd.");
-        adminScreen();
-      }
-    }
-
-    function showUsers() {
-      // Implementatie gebruikerbeheer (toevoegen, wijzigen, verwijderen) kan hier verder worden uitgebreid
-      showAlert("Gebruikerbeheer UI hier verder uitbreiden.");
-      adminScreen();
-    }
-
-    function showProducts() {
-      // Implementatie voorraadbeheer
-      showAlert("Voorraadbeheer UI hier verder uitbreiden.");
-      adminScreen();
-    }
-
-    function addProduct() {
-      const name = prompt("Naam van product:");
-      const price = parseFloat(prompt("Prijs:"));
-      const stock = parseInt(prompt("Voorraad:"), 10);
-      if (name && !isNaN(price) && !isNaN(stock)) {
-        supabase.from("products").insert({ name, price, stock });
-        showAlert("Product toegevoegd.");
-        adminScreen();
-      } else {
-        showAlert("Ongeldige invoer.");
-      }
-    }
-
-    startScreen();
+    });
   </script>
 </body>
 </html>
+<!-- EINDE: Volledige App in één HTML -->
