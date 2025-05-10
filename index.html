@@ -133,6 +133,7 @@
       const lijst = document.getElementById('voorraadLijst');
       lijst.innerHTML = '<p>Laden...</p>';
       try {
+        console.log("Supabase client:", supabaseClient);
         const { data, error } = await supabaseClient.from('producten').select('*');
         if (error) throw error;
         lijst.innerHTML = '';
@@ -149,6 +150,16 @@
         lijst.innerHTML = `<p class="text-red-600">Fout bij laden: ${err.message}</p>`;
         console.error("Voorraad fout:", err);
       }
+    }
+
+    function toonProductToevoegen() {
+      verbergBeheerSecties();
+      document.getElementById('productToevoegenSectie').classList.remove('hidden');
+    }
+
+    function toonBestelGeschiedenis() {
+      verbergBeheerSecties();
+      document.getElementById('bestelGeschiedenisSectie').classList.remove('hidden');
     }
 
     function toonLoginPopup(pagina) {
@@ -177,6 +188,7 @@
 
     window.onload = () => {
       supabaseClient = supabase.createClient('https://your-project-url.supabase.co', 'public-anon-key');
+      console.log("Supabase geladen:", supabaseClient);
 
       document.getElementById('bestelBtn').addEventListener('click', () => toonLoginPopup('bestelscherm'));
       document.getElementById('beheerBtn').addEventListener('click', () => toonLoginPopup('beheerscherm'));
