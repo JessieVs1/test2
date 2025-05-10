@@ -20,6 +20,22 @@
     input, select, button, textarea {
       margin-top: 0.5rem;
     }
+    .popup {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+    .popup-content {
+      background-color: white;
+      padding: 2rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-center items-center p-6">
@@ -29,6 +45,18 @@
     <div class="space-x-4">
       <button id="bestelBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl shadow">Bestellen</button>
       <button id="beheerBtn" class="bg-gray-700 hover:bg-gray-800 text-white font-semibold px-6 py-3 rounded-xl shadow">Beheer</button>
+    </div>
+  </div>
+
+  <!-- Login popup -->
+  <div id="loginPopup" class="popup hidden">
+    <div class="popup-content">
+      <h3 class="text-xl font-bold mb-4">Voer je gebruikerscode in</h3>
+      <input type="text" id="gebruikerscodeInput" class="border w-full px-3 py-2 rounded" placeholder="Gebruikerscode">
+      <div class="flex justify-end space-x-2 mt-4">
+        <button id="loginCancelBtn" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">Annuleer</button>
+        <button id="loginConfirmBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Ga verder</button>
+      </div>
     </div>
   </div>
 
@@ -51,15 +79,13 @@
     </div>
     <button onclick="toonPagina('startscherm')" class="mt-6 bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500">Terug</button>
 
-    <!-- Voorraadbeheer -->
     <div id="voorraadBeheerSectie" class="hidden mt-6 bg-white p-6 rounded-xl shadow">
       <h3 class="text-xl font-semibold mb-4">Voorraad Beheer</h3>
-      <div id="voorraadLijst" class="space-y-2">
+      <div id="voorraadLijst" class="space-y-2 text-gray-700">
         <p class="text-gray-500">Laden...</p>
       </div>
     </div>
 
-    <!-- Product toevoegen -->
     <div id="productToevoegenSectie" class="hidden mt-6 bg-white p-6 rounded-xl shadow">
       <h3 class="text-xl font-semibold mb-4">Nieuw Product Toevoegen</h3>
       <form id="productForm" class="space-y-4">
@@ -70,7 +96,6 @@
       </form>
     </div>
 
-    <!-- Bestelgeschiedenis -->
     <div id="bestelGeschiedenisSectie" class="hidden mt-6 bg-white p-6 rounded-xl shadow">
       <h3 class="text-xl font-semibold mb-4">Bestelgeschiedenis</h3>
       <div id="geschiedenisLijst" class="space-y-2 text-sm text-gray-700">Laden...</div>
@@ -80,139 +105,77 @@
   <script>
     let huidigeGebruiker = null;
     let supabaseClient = null;
+    let doelPagina = '';
 
     function toonPagina(paginaId) {
-      console.log("Wissel naar pagina:", paginaId);
       document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
       document.getElementById(paginaId).classList.remove('hidden');
     }
 
     function verbergBeheerSecties() {
-      console.log("Verberg alle beheersecties");
-      const secties = [
-        'voorraadBeheerSectie',
-        'productToevoegenSectie',
-        'bestelGeschiedenisSectie'
-      ];
+      const secties = ['voorraadBeheerSectie','productToevoegenSectie','bestelGeschiedenisSectie'];
       secties.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
-        else console.warn("Sectie niet gevonden:", id);
       });
     }
 
     async function toonVoorraadBeheer() {
-      if (!supabaseClient) return alert("Supabase client niet geïnitialiseerd.");
       verbergBeheerSecties();
-      document.getElementById('voorraadBeheerSectie').classList.remove('hidden');
+      const sectie = document.getElementById('voorraadBeheerSectie');
+      sectie.classList.remove('hidden');
       const lijst = document.getElementById('voorraadLijst');
-      lijst.innerHTML = 'Laden...';
-      const { data, error } = await supabaseClient.from('producten').select('*');
-      if (error) return lijst.innerHTML = 'Fout bij laden';
-      lijst.innerHTML = '';
-      data.forEach(product => {
-        const div = document.createElement('div');
-        div.textContent = `${product.naam}: voorraad ${product.voorraad}`;
-        lijst.appendChild(div);
-      });
-    }
-
-    function toonProductToevoegen() {
-      verbergBeheerSecties();
-      document.getElementById('productToevoegenSectie').classList.remove('hidden');
-    }
-
-    async function voegProductToe() {
-      const naam = document.getElementById('productNaam').value;
-      const prijs = parseFloat(document.getElementById('productPrijs').value);
-      const voorraad = parseInt(document.getElementById('productVoorraad').value);
-      if (!naam || isNaN(prijs) || isNaN(voorraad)) return alert('Vul alles correct in.');
-      await supabaseClient.from('producten').insert([{ naam, prijs, voorraad }]);
-      alert('Product toegevoegd!');
-    }
-
-    async function toonBestelGeschiedenis() {
-      if (!supabaseClient) return alert("Supabase client niet geïnitialiseerd.");
-      verbergBeheerSecties();
-      document.getElementById('bestelGeschiedenisSectie').classList.remove('hidden');
-      const lijst = document.getElementById('geschiedenisLijst');
-      lijst.innerHTML = 'Laden...';
-      const { data, error } = await supabaseClient.from('bestellingen').select('*');
-      if (error) return lijst.innerHTML = 'Fout bij laden';
-      lijst.innerHTML = '';
-      data.forEach(bestelling => {
-        const item = document.createElement('div');
-        item.textContent = `Product ID: ${bestelling.product_id}, Aantal: ${bestelling.aantal}`;
-        lijst.appendChild(item);
-      });
-    }
-
-    async function laadProducten() {
-      const lijst = document.getElementById('productenLijst');
       lijst.innerHTML = '<p>Laden...</p>';
-      const { data, error } = await supabaseClient.from('producten').select('*');
-      if (error) return lijst.innerHTML = '<p>Fout bij laden van producten.</p>';
-      lijst.innerHTML = '';
-      data.forEach(product => {
-        const div = document.createElement('div');
-        div.className = 'flex items-center justify-between border p-4 rounded-lg shadow';
-        div.innerHTML = `
-          <div>
-            <h4 class="font-semibold">${product.naam}</h4>
-            <p class="text-gray-600">Prijs: €${product.prijs.toFixed(2)} | Voorraad: ${product.voorraad}</p>
-          </div>
-          <input type="number" min="0" max="${product.voorraad}" id="product-${product.id}" class="w-20 border rounded px-2 py-1" placeholder="0">
-        `;
-        lijst.appendChild(div);
-      });
-    }
-
-    async function plaatsBestelling() {
-      const inputs = document.querySelectorAll('#productenLijst input');
-      for (const input of inputs) {
-        const aantal = parseInt(input.value);
-        if (!aantal || aantal <= 0) continue;
-        const productId = input.id.split('-')[1];
-        await supabaseClient.from('bestellingen').insert([{ product_id: productId, aantal, gebruiker: huidigeGebruiker }]);
-      }
-      alert("Bestelling geplaatst!");
-      toonPagina('startscherm');
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      const { createClient } = supabase;
-      supabaseClient = createClient(
-        'https://nsevcinmxmaplnpyctht.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU'
-      );
-
-      document.getElementById('bestelBtn').addEventListener('click', async () => {
-        const code = prompt("Voer je gebruikerscode in:");
-        if (!code) return alert("Geen code ingevoerd.");
-        const { data, error } = await supabaseClient.from('gebruikers').select('*').eq('code', code).single();
-        if (error || !data) return alert("Code niet gevonden. Toegang geweigerd.");
-        huidigeGebruiker = data.naam;
-        document.getElementById('gebruikersNaam').innerText = `Welkom, ${data.naam}`;
-        toonPagina('bestelscherm');
-        laadProducten();
-      });
-
-      document.getElementById('beheerBtn').addEventListener('click', async () => {
-        const code = prompt("Voer de admincode in:");
-        if (code === "Admin123") {
-          try {
-            toonPagina('beheerscherm');
-            verbergBeheerSecties();
-            toonVoorraadBeheer();
-          } catch (e) {
-            alert("Fout bij tonen van beheerpagina: " + e.message);
-            console.error(e);
-          }
+      try {
+        const { data, error } = await supabaseClient.from('producten').select('*');
+        if (error) throw error;
+        lijst.innerHTML = '';
+        if (!data || data.length === 0) {
+          lijst.innerHTML = '<p class="text-gray-500">Geen producten gevonden.</p>';
         } else {
-          alert("Ongeldige admincode.");
+          data.forEach(product => {
+            const div = document.createElement('div');
+            div.textContent = `${product.naam}: voorraad ${product.voorraad}`;
+            lijst.appendChild(div);
+          });
         }
-      });
-    });
+      } catch (err) {
+        lijst.innerHTML = `<p class="text-red-600">Fout bij laden: ${err.message}</p>`;
+        console.error("Voorraad fout:", err);
+      }
+    }
+
+    function toonLoginPopup(pagina) {
+      doelPagina = pagina;
+      document.getElementById('loginPopup').classList.remove('hidden');
+    }
+
+    function verbergLoginPopup() {
+      document.getElementById('loginPopup').classList.add('hidden');
+      document.getElementById('gebruikerscodeInput').value = '';
+    }
+
+    function bevestigLogin() {
+      const code = document.getElementById('gebruikerscodeInput').value.trim();
+      if (!code) return alert('Voer een geldige gebruikerscode in.');
+      huidigeGebruiker = code;
+      verbergLoginPopup();
+      if (doelPagina === 'bestelscherm') {
+        toonPagina('bestelscherm');
+        document.getElementById('gebruikersNaam').textContent = `Gebruiker: ${huidigeGebruiker}`;
+      } else if (doelPagina === 'beheerscherm') {
+        toonPagina('beheerscherm');
+      }
+    }
+
+    window.onload = () => {
+      supabaseClient = supabase.createClient('https://your-project-url.supabase.co', 'public-anon-key');
+
+      document.getElementById('bestelBtn').addEventListener('click', () => toonLoginPopup('bestelscherm'));
+      document.getElementById('beheerBtn').addEventListener('click', () => toonLoginPopup('beheerscherm'));
+      document.getElementById('loginConfirmBtn').addEventListener('click', bevestigLogin);
+      document.getElementById('loginCancelBtn').addEventListener('click', verbergLoginPopup);
+    }
   </script>
 </body>
 </html>
