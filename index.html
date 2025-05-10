@@ -82,15 +82,23 @@
     let supabaseClient = null;
 
     function toonPagina(paginaId) {
+      console.log("Wissel naar pagina:", paginaId);
       document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
       document.getElementById(paginaId).classList.remove('hidden');
-      console.log("Toon pagina:", paginaId);
     }
 
     function verbergBeheerSecties() {
-      document.getElementById('voorraadBeheerSectie').classList.add('hidden');
-      document.getElementById('productToevoegenSectie').classList.add('hidden');
-      document.getElementById('bestelGeschiedenisSectie').classList.add('hidden');
+      console.log("Verberg alle beheersecties");
+      const secties = [
+        'voorraadBeheerSectie',
+        'productToevoegenSectie',
+        'bestelGeschiedenisSectie'
+      ];
+      secties.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+        else console.warn("Sectie niet gevonden:", id);
+      });
     }
 
     async function toonVoorraadBeheer() {
@@ -195,7 +203,7 @@
           try {
             toonPagina('beheerscherm');
             verbergBeheerSecties();
-            console.log("Beheerscherm getoond");
+            toonVoorraadBeheer();
           } catch (e) {
             alert("Fout bij tonen van beheerpagina: " + e.message);
             console.error(e);
