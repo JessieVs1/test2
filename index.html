@@ -58,6 +58,21 @@
       margin: 10px 0;
       text-align: left;
     }
+    .remove-btn {
+      color: red;
+      margin-left: 10px;
+      cursor: pointer;
+    }
+    .add-btn {
+      background-color: #007bff;
+      border-radius: 6px;
+      padding: 10px;
+      width: auto;
+      margin-top: 5px;
+    }
+    .add-btn:hover {
+      background-color: #0069d9;
+    }
     @media (max-width: 500px) {
       .container, .screen {
         padding: 20px;
@@ -74,126 +89,120 @@
   </style>
 </head>
 <body>
-  <div class="container" id="startScreen">
-    <h1>Welkom bij de Bestel Beheer App</h1>
-    <button class="btn" onclick="promptUserCode()">Bestellen</button>
-    <button class="btn" onclick="promptAdminCode()">Beheer</button>
-  </div>
-
-  <div class="screen hidden" id="orderScreen">
-    <h2>Bestelscherm</h2>
-    <div id="productList"></div>
-    <h3>Winkelwagentje</h3>
-    <div id="cart"></div>
-    <button class="btn" onclick="confirmOrder()">Bevestig bestelling</button>
-    <button class="btn" onclick="goToStart()">Terug</button>
-  </div>
-
-  <div class="screen hidden" id="adminScreen">
-    <h2>Beheerscherm</h2>
-    <button class="btn" onclick="showUserManagement()">Gebruikersbeheer</button>
-    <button class="btn" onclick="showProductManagement()">Voorraadbeheer</button>
-    <button class="btn" onclick="showOrderHistory()">Bestelgeschiedenis</button>
-    <div id="userManagementSection" class="hidden"></div>
-    <div id="productManagementSection" class="hidden"></div>
-    <div id="orderHistorySection" class="hidden"></div>
-    <button class="btn" onclick="goToStart()">Terug</button>
-  </div>
+  <div class="container" id="app"></div>
 
   <script>
-    let supabase;
-    window.addEventListener('DOMContentLoaded', () => {
-      supabase = window.supabase.createClient(
-        'https://nsevcinmxmaplnpyctht.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU'
-      );
-    });
-  </script>
-  <script defer>
-    let cart = [];
-    let currentUserCode = '';
+    const supabase = window.supabase.createClient(
+      'https://nsevcinmxmaplnpyctht.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXZjaW5teG1hcGxucHljdGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTkxOTAsImV4cCI6MjA2MTg3NTE5MH0.-GrwWMhWxXXZM2zL3S_Zat7GhpvbgEBzBGpKzhy-rcU'
+    );
 
-    function goToStart() {
-      document.querySelectorAll('.screen, .container').forEach(el => el.classList.add('hidden'));
-      document.getElementById('startScreen').classList.remove('hidden');
+    let cart = [];
+
+    function renderStartScreen() {
+      document.getElementById('app').innerHTML = `
+        <h1>Welkom</h1>
+        <button class="btn" onclick="promptUserCode()">Bestellen</button>
+        <button class="btn" onclick="promptAdminCode()">Beheer</button>
+      `;
     }
 
     function promptUserCode() {
-      const code = prompt('Voer je gebruikerscode in:');
-      if (!code) return;
-      currentUserCode = code;
-      checkUserCode(code);
+      const code = prompt("Voer je gebruikerscode in:");
+      if (code) checkUserCode(code);
     }
 
     async function checkUserCode(code) {
-      const { data, error } = await supabase.from('users').select('*').eq('code', code);
-      if (data && data.length > 0) {
-        document.getElementById('startScreen').classList.add('hidden');
-        document.getElementById('orderScreen').classList.remove('hidden');
-        loadProducts();
-      } else {
-        alert('Ongeldige gebruikerscode.');
-      }
+      const { data } = await supabase.from('users').select('*').eq('code', code).single();
+      if (data) loadOrderScreen(code);
+      else alert("Ongeldige gebruikerscode");
     }
 
     function promptAdminCode() {
-      const code = prompt('Voer de admincode in:');
-      if (code === 'Admin123') {
-        document.getElementById('startScreen').classList.add('hidden');
-        document.getElementById('adminScreen').classList.remove('hidden');
-      } else {
-        alert('Ongeldige admincode.');
-      }
+      const code = prompt("Voer de beheercode in:");
+      if (code === 'Admin123') loadAdminScreen();
+      else alert("Ongeldige beheercode");
     }
 
-    async function loadProducts() {
+    async function loadOrderScreen(userCode) {
       const { data: products } = await supabase.from('products').select('*');
-      const list = document.getElementById('productList');
-      list.innerHTML = '';
-      products.forEach(p => {
-        const div = document.createElement('div');
-        div.className = 'product';
-        div.innerHTML = `${p.name} - €${p.price} (Voorraad: ${p.stock}) <button onclick="addToCart(${p.id}, '${p.name}', ${p.price}, ${p.stock})">Voeg toe</button>`;
-        list.appendChild(div);
-      });
+      document.getElementById('app').innerHTML = `
+        <h2>Bestellen</h2>
+        <div>${products.map(p => `
+          <div class="product">
+            <b>${p.name}</b> - €${p.price} (Voorraad: ${p.stock})<br>
+            <button class="btn add-btn" onclick="addToCart('${p.name}', ${p.price}, ${p.id}, '${userCode}')">➕ Voeg toe</button>
+          </div>`).join('')}</div>
+        <h3>Winkelwagen</h3>
+        <div id="cart"></div>
+        <button class="btn" onclick="placeOrder('${userCode}')">Bevestig bestelling</button>
+        <button class="btn" onclick="renderStartScreen()">Terug</button>
+      `;
+      showCart();
     }
 
-    function addToCart(id, name, price, stock) {
-      const existing = cart.find(item => item.id === id);
-      if (existing) {
-        if (existing.quantity + 1 > stock) return alert('Niet genoeg voorraad');
-        existing.quantity++;
-      } else {
-        if (stock < 1) return alert('Niet genoeg voorraad');
-        cart.push({ id, name, price, quantity: 1 });
-      }
+    function addToCart(name, price, productId, userCode) {
+      const existing = cart.find(item => item.name === name);
+      if (existing) existing.quantity++;
+      else cart.push({ name, price, productId, quantity: 1 });
       showCart();
     }
 
     function showCart() {
       const div = document.getElementById('cart');
-      div.innerHTML = '';
-      cart.forEach(item => {
-        div.innerHTML += `${item.name} x ${item.quantity} = €${item.price * item.quantity}<br>`;
-      });
+      if (!div) return;
+      div.innerHTML = cart.map((item, index) =>
+        `${item.name} x ${item.quantity} = €${item.price * item.quantity} <span class="remove-btn" onclick="removeFromCart(${index})">✖</span>`
+      ).join('<br>');
     }
 
-    async function confirmOrder() {
-      for (let item of cart) {
-        const { data } = await supabase.from('products').select('stock').eq('id', item.id).single();
-        if (data.stock < item.quantity) return alert(`Niet genoeg voorraad voor ${item.name}`);
-        await supabase.from('products').update({ stock: data.stock - item.quantity }).eq('id', item.id);
-        await supabase.from('orders').insert([{ user_code: currentUserCode, name: item.name, quantity: item.quantity, price: item.price }]);
-      }
-      alert('Bestelling geplaatst!');
-      cart = [];
+    function removeFromCart(index) {
+      cart.splice(index, 1);
       showCart();
-      loadProducts();
+    }
+
+    async function placeOrder(userCode) {
+      for (const item of cart) {
+        const { data: product } = await supabase.from('products').select('*').eq('id', item.productId).single();
+        if (!product || product.stock < item.quantity) {
+          alert(`Onvoldoende voorraad voor ${item.name}`);
+          return;
+        }
+        await supabase.from('products').update({ stock: product.stock - item.quantity }).eq('id', item.productId);
+        await supabase.from('orders').insert({ name: item.name, quantity: item.quantity, price: item.price, user_code: userCode });
+      }
+      alert("Bestelling geplaatst!");
+      cart = [];
+      renderStartScreen();
+    }
+
+    function loadAdminScreen() {
+      document.getElementById('app').innerHTML = `
+        <h2>Beheer</h2>
+        <button class="btn" onclick="showUserManagement()">Gebruikersbeheer</button>
+        <button class="btn" onclick="showProductManagement()">Voorraadbeheer</button>
+        <button class="btn" onclick="showOrderHistory()">Bestelgeschiedenis</button>
+        <button class="btn" onclick="renderStartScreen()">Terug</button>
+        <div id="userManagementSection" class="hidden"></div>
+        <div id="productManagementSection" class="hidden"></div>
+        <div id="orderHistorySection" class="hidden"></div>
+      `;
+    }
+
+    function toggleSection(sectionId) {
+      const sections = ['userManagementSection', 'productManagementSection', 'orderHistorySection'];
+      sections.forEach(id => {
+        const section = document.getElementById(id);
+        if (section) section.classList.add('hidden');
+      });
+      const target = document.getElementById(sectionId);
+      if (target) target.classList.toggle('hidden');
     }
 
     async function showUserManagement() {
+      toggleSection('userManagementSection');
       const div = document.getElementById('userManagementSection');
-      div.classList.remove('hidden');
+      if (div.classList.contains('hidden')) return;
       const { data: users } = await supabase.from('users').select('*');
       div.innerHTML = '<h3>Gebruikers</h3>' + users.map(u => `${u.name} (${u.code}) <button onclick="deleteUser(${u.id})">Verwijder</button>`).join('<br>') + `
         <h4>Nieuwe gebruiker</h4>
@@ -202,23 +211,10 @@
         <button class="btn" onclick="addUser()">Toevoegen</button>`;
     }
 
-    async function addUser() {
-      const name = document.getElementById('newUserName').value;
-      const code = document.getElementById('newUserCode').value;
-      if (name && code) {
-        await supabase.from('users').insert([{ name, code }]);
-        showUserManagement();
-      }
-    }
-
-    async function deleteUser(id) {
-      await supabase.from('users').delete().eq('id', id);
-      showUserManagement();
-    }
-
     async function showProductManagement() {
+      toggleSection('productManagementSection');
       const div = document.getElementById('productManagementSection');
-      div.classList.remove('hidden');
+      if (div.classList.contains('hidden')) return;
       const { data: products } = await supabase.from('products').select('*');
       div.innerHTML = '<h3>Producten</h3>' + products.map(p => `
         ${p.name} (Voorraad: ${p.stock})<br>
@@ -231,6 +227,38 @@
         <button class="btn" onclick="addProduct()">Toevoegen</button>`;
     }
 
+    async function showOrderHistory() {
+      toggleSection('orderHistorySection');
+      const div = document.getElementById('orderHistorySection');
+      if (div.classList.contains('hidden')) return;
+      const { data: orders } = await supabase.from('orders').select('*');
+      const { data: users } = await supabase.from('users').select('*');
+      if (!orders || !users) return;
+      const userMap = Object.fromEntries(users.map(u => [u.code, u.name]));
+      const grouped = orders.reduce((acc, cur) => {
+        if (!acc[cur.user_code]) acc[cur.user_code] = [];
+        acc[cur.user_code].push(cur);
+        return acc;
+      }, {});
+      div.innerHTML = '<h3>Bestelgeschiedenis</h3>' + Object.entries(grouped).map(([code, orders]) => {
+        const totaal = orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
+        const lijst = orders.map(o => `${o.name} x ${o.quantity} = €${o.price * o.quantity}`).join('<br>');
+        return `<b>${userMap[code] || 'Onbekend'} (${code})</b><br>${lijst}<br><b>Totaal: €${totaal}</b><hr>`;
+      }).join('') + `<button class="btn" onclick="confirmClearOrders()">Verwijder alles</button>`;
+    }
+
+    async function deleteUser(id) {
+      await supabase.from('users').delete().eq('id', id);
+      showUserManagement();
+    }
+
+    async function addUser() {
+      const name = document.getElementById('newUserName').value;
+      const code = document.getElementById('newUserCode').value;
+      await supabase.from('users').insert({ name, code });
+      showUserManagement();
+    }
+
     async function updateStock(id) {
       const stock = parseInt(document.getElementById(`stock-${id}`).value);
       await supabase.from('products').update({ stock }).eq('id', id);
@@ -241,34 +269,18 @@
       const name = document.getElementById('newProductName').value;
       const price = parseFloat(document.getElementById('newProductPrice').value);
       const stock = parseInt(document.getElementById('newProductStock').value);
-      if (name && !isNaN(price) && !isNaN(stock)) {
-        await supabase.from('products').insert([{ name, price, stock }]);
-        showProductManagement();
-      }
+      await supabase.from('products').insert({ name, price, stock });
+      showProductManagement();
     }
 
-    async function showOrderHistory() {
-      const div = document.getElementById('orderHistorySection');
-      div.classList.remove('hidden');
-      const { data: orders } = await supabase.from('orders').select('*');
-      const grouped = orders.reduce((acc, cur) => {
-        if (!acc[cur.user_code]) acc[cur.user_code] = [];
-        acc[cur.user_code].push(cur);
-        return acc;
-      }, {});
-      div.innerHTML = '<h3>Bestelgeschiedenis</h3>' + Object.entries(grouped).map(([code, orders]) => {
-        const totaal = orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
-        const lijst = orders.map(o => `${o.name} x ${o.quantity} = €${o.price * o.quantity}`).join('<br>');
-        return `<b>${code}</b><br>${lijst}<br><b>Totaal: €${totaal}</b><hr>`;
-      }).join('') + `<button class="btn" onclick="confirmClearOrders()">Verwijder alles</button>`;
-    }
-
-    function confirmClearOrders() {
-      if (confirm('Weet je zeker dat je alle bestellingen wilt verwijderen?')) {
-        supabase.from('orders').delete().neq('id', 0);
+    async function confirmClearOrders() {
+      if (confirm("Weet je zeker dat je alle bestellingen wilt verwijderen?")) {
+        await supabase.from('orders').delete().neq('id', 0);
         showOrderHistory();
       }
     }
+
+    renderStartScreen();
   </script>
 </body>
 </html>
