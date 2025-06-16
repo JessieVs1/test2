@@ -13,8 +13,9 @@
       padding: 0;
       display: flex;
       justify-content: center;
-      align-items: center;
-      height: 100vh;
+      align-items: flex-start;
+      min-height: 100vh;
+      overflow-y: auto;
     }
     .container, .screen {
       background-color: #ffffff;
@@ -211,6 +212,20 @@
         <button class="btn" onclick="addUser()">Toevoegen</button>`;
     }
 
+    async function deleteUser(id) {
+      if (confirm("Weet je zeker dat je deze gebruiker wilt verwijderen?")) {
+        await supabase.from('users').delete().eq('id', id);
+        showUserManagement();
+      }
+    }
+
+    async function addUser() {
+      const name = document.getElementById('newUserName').value;
+      const code = document.getElementById('newUserCode').value;
+      await supabase.from('users').insert({ name, code });
+      showUserManagement();
+    }
+
     async function showProductManagement() {
       toggleSection('productManagementSection');
       const div = document.getElementById('productManagementSection');
@@ -225,6 +240,20 @@
         <input id="newProductPrice" type="number" placeholder="Prijs"><br>
         <input id="newProductStock" type="number" placeholder="Voorraad"><br>
         <button class="btn" onclick="addProduct()">Toevoegen</button>`;
+    }
+
+    async function updateStock(id) {
+      const stock = parseInt(document.getElementById(`stock-${id}`).value);
+      await supabase.from('products').update({ stock }).eq('id', id);
+      showProductManagement();
+    }
+
+    async function addProduct() {
+      const name = document.getElementById('newProductName').value;
+      const price = parseFloat(document.getElementById('newProductPrice').value);
+      const stock = parseInt(document.getElementById('newProductStock').value);
+      await supabase.from('products').insert({ name, price, stock });
+      showProductManagement();
     }
 
     async function showOrderHistory() {
@@ -245,32 +274,6 @@
         const lijst = orders.map(o => `${o.name} x ${o.quantity} = €${o.price * o.quantity}`).join('<br>');
         return `<b>${userMap[code] || 'Onbekend'} (${code})</b><br>${lijst}<br><b>Totaal: €${totaal}</b><hr>`;
       }).join('') + `<button class="btn" onclick="confirmClearOrders()">Verwijder alles</button>`;
-    }
-
-    async function deleteUser(id) {
-      await supabase.from('users').delete().eq('id', id);
-      showUserManagement();
-    }
-
-    async function addUser() {
-      const name = document.getElementById('newUserName').value;
-      const code = document.getElementById('newUserCode').value;
-      await supabase.from('users').insert({ name, code });
-      showUserManagement();
-    }
-
-    async function updateStock(id) {
-      const stock = parseInt(document.getElementById(`stock-${id}`).value);
-      await supabase.from('products').update({ stock }).eq('id', id);
-      showProductManagement();
-    }
-
-    async function addProduct() {
-      const name = document.getElementById('newProductName').value;
-      const price = parseFloat(document.getElementById('newProductPrice').value);
-      const stock = parseInt(document.getElementById('newProductStock').value);
-      await supabase.from('products').insert({ name, price, stock });
-      showProductManagement();
     }
 
     async function confirmClearOrders() {
