@@ -6,15 +6,17 @@
   <title>Bestel Beheer App</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
     body {
       font-family: Arial, sans-serif;
       background: linear-gradient(135deg, #f9f9f9, #e3e3e3);
-      margin: 0;
-      padding: 0;
       display: flex;
       justify-content: center;
       align-items: flex-start;
-      min-height: 100vh;
       overflow-y: auto;
     }
     .container, .screen {
@@ -74,6 +76,22 @@
     .add-btn:hover {
       background-color: #0069d9;
     }
+    #backToTopBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: none;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+    #backToTopBtn:hover {
+      background-color: #45a049;
+    }
     @media (max-width: 500px) {
       .container, .screen {
         padding: 20px;
@@ -89,9 +107,9 @@
     }
   </style>
 </head>
-<body>
-  <div class="container" id="app"></div>
-
+<body style="min-height: 100vh;">
+  <div class="container" id="app" style="overflow-y: auto; max-height: none;"></div>
+  <button id="backToTopBtn" onclick="window.scrollTo({ top: 0, behavior: 'smooth' });">⬆️ Boven</button>
   <script>
     const supabase = window.supabase.createClient(
       'https://nsevcinmxmaplnpyctht.supabase.co',
@@ -212,20 +230,6 @@
         <button class="btn" onclick="addUser()">Toevoegen</button>`;
     }
 
-    async function deleteUser(id) {
-      if (confirm("Weet je zeker dat je deze gebruiker wilt verwijderen?")) {
-        await supabase.from('users').delete().eq('id', id);
-        showUserManagement();
-      }
-    }
-
-    async function addUser() {
-      const name = document.getElementById('newUserName').value;
-      const code = document.getElementById('newUserCode').value;
-      await supabase.from('users').insert({ name, code });
-      showUserManagement();
-    }
-
     async function showProductManagement() {
       toggleSection('productManagementSection');
       const div = document.getElementById('productManagementSection');
@@ -240,20 +244,6 @@
         <input id="newProductPrice" type="number" placeholder="Prijs"><br>
         <input id="newProductStock" type="number" placeholder="Voorraad"><br>
         <button class="btn" onclick="addProduct()">Toevoegen</button>`;
-    }
-
-    async function updateStock(id) {
-      const stock = parseInt(document.getElementById(`stock-${id}`).value);
-      await supabase.from('products').update({ stock }).eq('id', id);
-      showProductManagement();
-    }
-
-    async function addProduct() {
-      const name = document.getElementById('newProductName').value;
-      const price = parseFloat(document.getElementById('newProductPrice').value);
-      const stock = parseInt(document.getElementById('newProductStock').value);
-      await supabase.from('products').insert({ name, price, stock });
-      showProductManagement();
     }
 
     async function showOrderHistory() {
@@ -276,6 +266,32 @@
       }).join('') + `<button class="btn" onclick="confirmClearOrders()">Verwijder alles</button>`;
     }
 
+    async function deleteUser(id) {
+      await supabase.from('users').delete().eq('id', id);
+      showUserManagement();
+    }
+
+    async function addUser() {
+      const name = document.getElementById('newUserName').value;
+      const code = document.getElementById('newUserCode').value;
+      await supabase.from('users').insert({ name, code });
+      showUserManagement();
+    }
+
+    async function updateStock(id) {
+      const stock = parseInt(document.getElementById(`stock-${id}`).value);
+      await supabase.from('products').update({ stock }).eq('id', id);
+      showProductManagement();
+    }
+
+    async function addProduct() {
+      const name = document.getElementById('newProductName').value;
+      const price = parseFloat(document.getElementById('newProductPrice').value);
+      const stock = parseInt(document.getElementById('newProductStock').value);
+      await supabase.from('products').insert({ name, price, stock });
+      showProductManagement();
+    }
+
     async function confirmClearOrders() {
       if (confirm("Weet je zeker dat je alle bestellingen wilt verwijderen?")) {
         await supabase.from('orders').delete().neq('id', 0);
@@ -284,6 +300,15 @@
     }
 
     renderStartScreen();
+
+    window.onscroll = function() {
+      const btn = document.getElementById("backToTopBtn");
+      if (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100) {
+        btn.style.display = "block";
+      } else {
+        btn.style.display = "none";
+      }
+    };
   </script>
 </body>
 </html>
